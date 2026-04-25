@@ -11,7 +11,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 # SurrealDB embedded
-surrealdb = { version = "2.0", default-features = false, features = ["kv-rocksdb", "protocol-ws"] }
+surrealdb = { version = "3.0", default-features = false, features = ["kv-rocksdb", "protocol-ws"] }
 
 [dev-dependencies]
 tokio-test = "0.4"
