@@ -59,3 +59,7 @@ will be opened once the public API stabilizes.
 
 Dual-licensed under MIT or Apache-2.0 — see [`LICENSE-MIT`](./LICENSE-MIT) and
 [`LICENSE-APACHE`](./LICENSE-APACHE).
+
+## License
+
+MIT — see [LICENSE](./LICENSE).
