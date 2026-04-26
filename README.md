@@ -1,5 +1,7 @@
 # PhenoData — Data Layer Workspace
 
+**Status:** maintenance
+
 Data-related crates for the Pheno ecosystem.
 
 ## Crates
