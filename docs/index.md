@@ -1,16 +1,26 @@
 # PhenoData
 
-PhenoData is the Phenotype data-layer workspace for storage adapters and query
-planning. It currently ships three Rust crates:
+> Data-layer workspace for storage adapters, vector search, and query planning.
 
-- `surreal-bridge` for embedded SurrealDB-backed skill and embedding storage.
-- `pg-bridge` for PostgreSQL with `pgvector`.
-- `pheno-query` for a unified query planner across data stores.
+PhenoData is the Phenotype data-layer workspace. It keeps the storage concerns
+separated into a small set of Rust crates, then documents the workspace through
+this VitePress shell.
 
-The repository is in maintenance mode. Changes should focus on correctness,
-dependency hygiene, compatibility, and clear documentation for existing APIs.
+## Surfaces
 
-## Quick Start
+| Surface | Purpose |
+| --- | --- |
+| `crates/surreal-bridge` | Embedded SurrealDB integration for local graph/document workloads |
+| `crates/pg-bridge` | PostgreSQL + `pgvector` support for durable storage and similarity search |
+| `crates/pheno-query` | Unified planner across supported data stores |
+| `docs/` | Maintenance docs, usage notes, and operations guidance |
+
+## Maintenance posture
+
+This repo is in maintenance mode. Favor correctness, dependency hygiene,
+compatibility, and documentation clarity over new surface area.
+
+## Quick start
 
 ```bash
 cargo build --workspace
@@ -18,21 +28,18 @@ cargo test --workspace
 cargo clippy --workspace -- -D warnings
 ```
 
-`pg-bridge` requires PostgreSQL 14+ with the `pgvector` extension for integration
-work. `surreal-bridge` uses embedded SurrealDB and does not require a standalone
-server.
+`pg-bridge` requires PostgreSQL 14+ with the `pgvector` extension. `surreal-bridge`
+runs embedded and does not require a standalone server.
 
-## Public Surfaces
+## Public routes
 
-| Surface | Purpose |
-| --- | --- |
-| Workspace root | Rust workspace and shared dependency policy |
-| `crates/surreal-bridge` | Embedded SurrealDB integration |
-| `crates/pg-bridge` | PostgreSQL and `pgvector` integration |
-| `crates/pheno-query` | Cross-store query planner |
-| GitHub Pages docs | This VitePress docs shell |
+- [`Guide`](/guide) for the workspace model and local requirements
+- [`Crates`](/crates) for the three crate summary
+- [`Operations`](/operations) for build, test, lint, and docs commands
 
-## Status
+## Public contract
 
-PhenoData is a maintenance project. Prefer narrowly scoped fixes, reproducible
-tests, and dependency/security updates over new product surface area.
+- Workspace root owns dependency policy and crate coordination
+- Bridge crates own store-specific integration
+- Query planner owns cross-store orchestration
+- Docs site is the public face of the workspace

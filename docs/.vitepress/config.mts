@@ -8,8 +8,10 @@ export default defineConfig({
   themeConfig: {
     logo: { text: "PhenoData" },
     nav: [
-      { text: "Guide", link: "/guide/" },
-      { text: "Crates", link: "/crates/" },
+      { text: "Overview", link: "/" },
+      { text: "Guide", link: "/guide" },
+      { text: "Crates", link: "/crates" },
+      { text: "Operations", link: "/operations" },
       { text: "GitHub", link: "https://github.com/KooshaPari/phenoData" },
     ],
     sidebar: [
@@ -17,9 +19,9 @@ export default defineConfig({
         text: "PhenoData",
         items: [
           { text: "Overview", link: "/" },
-          { text: "Guide", link: "/guide/" },
-          { text: "Crates", link: "/crates/" },
-          { text: "Operations", link: "/operations/" },
+          { text: "Guide", link: "/guide" },
+          { text: "Crates", link: "/crates" },
+          { text: "Operations", link: "/operations" },
         ],
       },
     ],
