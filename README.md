@@ -9,11 +9,14 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Quality Gate](https://github.com/KooshaPari/phenoData/actions/workflows/quality-gate.yml/badge.svg)](https://github.com/KooshaPari/phenoData/actions/workflows/quality-gate.yml)
-[![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
+[![Docs](https://github.com/KooshaPari/phenoData/actions/workflows/pages.yml/badge.svg)](https://github.com/KooshaPari/phenoData/actions/workflows/pages.yml)
+[![Rust](https://img.shields.io/badge/rust-1.84%2B-orange.svg)](https://www.rust-lang.org)
 
 **Status:** maintenance
 
 Data-related crates for the Pheno ecosystem.
+
+Docs shell: `docs/` is a VitePress site published through GitHub Pages.
 
 ## Crates
 
@@ -62,6 +65,16 @@ cargo test  --workspace
 cargo clippy --workspace -- -D warnings
 ```
 
+## Docs
+
+```bash
+bun install
+bun run docs:build
+```
+
+The Pages workflow builds with `GITHUB_PAGES=true`, which serves the site under
+the `/phenoData/` GitHub Pages base path.
+
 ## Examples
 
 Standalone examples are not yet published. See each crate's `src/` and inline tests
@@ -71,8 +84,5 @@ will be opened once the public API stabilizes.
 ## License
 
 Dual-licensed under MIT or Apache-2.0 — see [`LICENSE-MIT`](./LICENSE-MIT) and
-[`LICENSE-APACHE`](./LICENSE-APACHE).
-
-## License
-
-MIT — see [LICENSE](./LICENSE).
+[`LICENSE-APACHE`](./LICENSE-APACHE). The repository also carries the org-standard
+[`LICENSE`](./LICENSE) file.
