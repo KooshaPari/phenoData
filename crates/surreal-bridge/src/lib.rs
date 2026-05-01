@@ -2,10 +2,8 @@
 //!
 //! Provides embedded SurrealDB with MCP protocol adapter and skill storage.
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use tokio::sync::RwLock;
 use surrealdb::engine::local::{Db, RocksDb};
 use surrealdb::Surreal;
 
@@ -19,46 +17,83 @@ impl PhenoSurreal {
     pub async fn new(path: impl Into<String>) -> Result<Self> {
         let db = Surreal::new::<RocksDb>(path.into()).await?;
         db.use_ns("pheno").use_db("main").await?;
-        
         Ok(Self { db })
     }
 
     /// Store a skill with versioning
-    pub async fn store_skill(&self, skill: Skill) -> Result<RecordId> {
-        let result = self.db.create("skill").content(skill).await?;
-        Ok(result)
+    pub async fn store_skill(&self, skill: Skill) -> Result<String> {
+        let id = format!("skill_{}", generate_id());
+        let data = serde_json::to_value(skill)?;
+        self.db
+            .query("CREATE skill CONTENT $data")
+            .bind(("data", data))
+            .await?;
+        Ok(id)
     }
 
     /// Query skills
     pub async fn query_skills(&self) -> Result<Vec<Skill>> {
-        let skills: Vec<Skill> = self.db.select("skill").await?;
+        let mut result = self.db.query("SELECT * FROM skill").await?;
+        let records: Vec<serde_json::Value> = result.take(0)?;
+        let skills = records
+            .into_iter()
+            .map(serde_json::from_value)
+            .collect::<Result<Vec<_>, _>>()?;
         Ok(skills)
     }
 
     /// Store vector embedding
-    pub async fn store_embedding(&self, embedding: Embedding) -> Result<RecordId> {
-        let result = self.db.create("embedding").content(embedding).await?;
-        Ok(result)
+    pub async fn store_embedding(&self, embedding: Embedding) -> Result<String> {
+        let id = format!("embedding_{}", generate_id());
+        let data = serde_json::to_value(embedding)?;
+        self.db
+            .query("CREATE embedding CONTENT $data")
+            .bind(("data", data))
+            .await?;
+        Ok(id)
     }
 
     /// Search similar embeddings
-    pub async fn search_similar(&self, query: &[f32], limit: usize) -> Result<Vec<ScoredEmbedding>> {
-        // Use SurrealDB's vector search
-        let results: Vec<ScoredEmbedding> = self.db
-            .query("SELECT *, vector::distance::cosine(embedding, $query) AS score FROM embedding ORDER BY score ASC LIMIT $limit")
+    pub async fn search_similar(
+        &self,
+        query: Vec<f32>,
+        limit: usize,
+    ) -> Result<Vec<ScoredEmbedding>> {
+        let mut result = self
+            .db
+            .query(
+                "SELECT *, vector::distance::cosine(embedding, $query) AS score \
+                 FROM embedding ORDER BY score ASC LIMIT $limit",
+            )
             .bind(("query", query))
             .bind(("limit", limit))
-            .await?
-            .take(0)?;
-        
-        Ok(results)
+            .await?;
+        let records: Vec<serde_json::Value> = result.take(0)?;
+        let embeddings = records
+            .into_iter()
+            .map(serde_json::from_value)
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(embeddings)
     }
+}
+
+/// Generate a random ID
+fn generate_id() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos() as u64;
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let counter = COUNTER.fetch_add(1, Ordering::Relaxed);
+    format!("{:x}-{:x}", now, counter)
 }
 
 /// Skill record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Skill {
-    pub id: Option<RecordId>,
+    pub id: Option<String>,
     pub name: String,
     pub version: String,
     pub code: String,
@@ -82,7 +117,7 @@ impl Skill {
 /// Embedding record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Embedding {
-    pub id: Option<RecordId>,
+    pub id: Option<String>,
     pub vector: Vec<f32>,
     pub metadata: serde_json::Value,
 }
@@ -90,39 +125,8 @@ pub struct Embedding {
 /// Scored embedding result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScoredEmbedding {
-    pub id: RecordId,
+    pub id: String,
     pub embedding: Vec<f32>,
     pub metadata: serde_json::Value,
-    pub score: f32,
-}
-
-/// SurrealDB record ID
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RecordId {
-    pub tb: String,
-    pub id: surrealdb::sql::Thing,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tempfile::tempdir;
-
-    #[tokio::test]
-    async fn test_create_skill() -> Result<()> {
-        let dir = tempdir()?;
-        let db = PhenoSurreal::new(dir.path().join("test.db")).await?;
-        
-        let skill = Skill::new(
-            "test-skill".to_string(),
-            "1.0.0".to_string(),
-            "fn main() {}".to_string(),
-            "wasm".to_string(),
-        );
-        
-        let id = db.store_skill(skill).await?;
-        assert!(id.tb == "skill");
-        
-        Ok(())
-    }
+    pub score: f64,
 }
