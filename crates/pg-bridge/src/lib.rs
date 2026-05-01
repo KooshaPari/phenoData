@@ -4,8 +4,8 @@
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use tokio_postgres::{NoTls, Row};
-use deadpool_postgres::{Config, ManagerConfig, RecyclingMethod, Pool};
+use tokio_postgres::NoTls;
+use deadpool_postgres::{Config, ManagerConfig, Pool, RecyclingMethod, Runtime};
 
 /// PgBridge - PostgreSQL with pgvector
 pub struct PgBridge {
@@ -21,7 +21,7 @@ impl PgBridge {
             recycling_method: RecyclingMethod::Fast,
         });
         
-        let pool = cfg.create_pool(Some(RecyclingMethod::Fast), NoTls)?;
+        let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls)?;
         
         Ok(Self { pool })
     }
