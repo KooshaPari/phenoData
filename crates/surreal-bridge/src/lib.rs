@@ -4,8 +4,6 @@
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use tokio::sync::RwLock;
 use surrealdb::engine::local::{Db, RocksDb};
 use surrealdb::Surreal;
 
