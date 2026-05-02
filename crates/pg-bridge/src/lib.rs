@@ -16,7 +16,7 @@ impl PgBridge {
     /// Create new PostgreSQL bridge with connection pool
     pub async fn new(conn_string: &str) -> Result<Self> {
         let mut cfg = Config::new();
-        cfg.host = Some(conn_string.split('@').last().unwrap_or("localhost").to_string());
+        cfg.host = Some(conn_string.split('@').next_back().unwrap_or("localhost").to_string());
         cfg.manager = Some(ManagerConfig {
             recycling_method: RecyclingMethod::Fast,
         });

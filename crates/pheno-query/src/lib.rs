@@ -75,7 +75,7 @@ impl QueryPlanner {
             ));
         }
         
-        if let Some(ref vec) = req.vector {
+        if let Some(ref _vec) = req.vector {
             query.push_str(&format!(" FETCH {}", req.collection));
         }
         
