@@ -6,7 +6,8 @@ allow = [ "MIT", "Apache-2.0", "Apache-2.0 WITH LLVM-exception", "BSD-2-Clause",
 
 [advisories]
 ignore = [
-    { id = "RUSTSEC-2023-0071", reason = "RSA Marvin Attack (RUSTSEC-2023-0071) affects the rsa crate. No safe upgrade path exists as of 2023. The vulnerability is inherited via the jsonwebtoken -> surrealdb-core dependency chain in this project; remediation awaits an upstream safe RSA implementation." },
+    # expires: 2027-05-05 — re-evaluate when rsa crate ships constant-time fix
+    { id = "RUSTSEC-2023-0071", reason = "RSA Marvin Attack timing side-channel inherited via jsonwebtoken -> surrealdb-core; no safe RSA upgrade path exists as the rsa crate's fully constant-time fix is still in progress upstream; workaround is to avoid RSA-based JWT algorithms in threat-exposed settings" },
 ]
 
 [bans]
