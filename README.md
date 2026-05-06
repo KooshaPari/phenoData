@@ -65,6 +65,8 @@ cargo test  --workspace
 cargo clippy --workspace -- -D warnings
 ```
 
+Integration smoke tests live in `crates/smoke-tests/tests/smoke.rs` and are part of the workspace test run.
+
 ## Docs
 
 ```bash
