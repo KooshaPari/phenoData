@@ -9,6 +9,7 @@ members = [
     "crates/surreal-bridge",
     "crates/pg-bridge",
     "crates/pheno-query",
+    "crates/smoke-tests",
 ]
 resolver = "3"
 
