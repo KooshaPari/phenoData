@@ -1,6 +1,8 @@
 name: Pages
 
 on:
+
+timeout-minutes: 15
   push:
     branches: [main]
     paths:
