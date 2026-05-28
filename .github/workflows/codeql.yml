@@ -5,7 +5,11 @@ concurrency:
 
 on:
 
-timeout-minutes: 20
+
+
+  timeout-minutes: 20
+
+
   push:
     branches: [main]
   pull_request:
@@ -19,13 +23,13 @@ permissions:
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         language: ["actions"]
     steps:
-      - uses: actions/checkout11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - uses: github/codeql-action/init@ce64ddcb0d8d890d2df4a9d1c04ff297367dea2a # v3
         with:
           languages: ${{ matrix.language }}
