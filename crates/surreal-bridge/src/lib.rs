@@ -9,8 +9,13 @@
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use surrealdb::engine::local::{Db, RocksDb};
+use surrealdb::engine::local::Db;
 use surrealdb::Surreal;
+
+#[cfg(not(windows))]
+use surrealdb::engine::local::RocksDb;
+#[cfg(windows)]
+use surrealdb::engine::local::Mem;
 
 pub type RecordId = String;
 
@@ -22,7 +27,7 @@ pub struct PhenoSurreal {
 impl PhenoSurreal {
     /// Create new embedded SurrealDB
     pub async fn new(path: impl Into<String>) -> Result<Self> {
-        let db = Surreal::new::<RocksDb>(path.into()).await?;
+        let db = open_local_db(path).await?;
         db.use_ns("pheno").use_db("main").await?;
         Ok(Self { db })
     }
@@ -91,6 +96,18 @@ impl PhenoSurreal {
             .filter_map(|r| serde_json::from_value(r).ok())
             .collect();
         Ok(scored)
+    }
+}
+
+async fn open_local_db(path: impl Into<String>) -> Result<Surreal<Db>> {
+    #[cfg(not(windows))]
+    {
+        Ok(Surreal::new::<RocksDb>(path.into()).await?)
+    }
+    #[cfg(windows)]
+    {
+        let _ = path.into();
+        Ok(Surreal::new::<Mem>(()).await?)
     }
 }
 
