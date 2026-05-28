@@ -3,9 +3,9 @@
 //! Provides pgvector-compatible vector search with PostgreSQL.
 
 use anyhow::Result;
+use deadpool_postgres::{Config, ManagerConfig, Pool, RecyclingMethod, Runtime};
 use serde::{Deserialize, Serialize};
 use tokio_postgres::NoTls;
-use deadpool_postgres::{Config, ManagerConfig, Pool, RecyclingMethod, Runtime};
 
 /// PgBridge - PostgreSQL with pgvector
 pub struct PgBridge {
@@ -16,65 +16,89 @@ impl PgBridge {
     /// Create new PostgreSQL bridge with connection pool
     pub async fn new(conn_string: &str) -> Result<Self> {
         let mut cfg = Config::new();
-        cfg.host = Some(conn_string.split('@').next_back().unwrap_or("localhost").to_string());
+        cfg.host = Some(
+            conn_string
+                .split('@')
+                .next_back()
+                .unwrap_or("localhost")
+                .to_string(),
+        );
         cfg.manager = Some(ManagerConfig {
             recycling_method: RecyclingMethod::Fast,
         });
-        
+
         let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls)?;
-        
+
         Ok(Self { pool })
     }
 
     /// Initialize pgvector extension and tables
     pub async fn init_schema(&self) -> Result<()> {
         let client = self.pool.get().await?;
-        
-        client.batch_execute(
-            "CREATE EXTENSION IF NOT EXISTS vector;
+
+        client
+            .batch_execute(
+                "CREATE EXTENSION IF NOT EXISTS vector;
              CREATE TABLE IF NOT EXISTS embeddings (
                  id SERIAL PRIMARY KEY,
                  name TEXT NOT NULL,
                  vector VECTOR(1536),
                  metadata JSONB
              );
-             CREATE INDEX ON embeddings USING HNSW (vector vector_cosine_ops);"
-        ).await?;
-        
+             CREATE INDEX ON embeddings USING HNSW (vector vector_cosine_ops);",
+            )
+            .await?;
+
         Ok(())
     }
 
     /// Store embedding
-    pub async fn store_embedding(&self, name: &str, vector: Vec<f32>, metadata: serde_json::Value) -> Result<i32> {
+    pub async fn store_embedding(
+        &self,
+        name: &str,
+        vector: Vec<f32>,
+        metadata: serde_json::Value,
+    ) -> Result<i32> {
         let client = self.pool.get().await?;
-        
-        let row = client.query_one(
-            "INSERT INTO embeddings (name, vector, metadata) VALUES ($1, $2, $3) RETURNING id",
-            &[&name, &vector, &metadata]
-        ).await?;
-        
+
+        let row = client
+            .query_one(
+                "INSERT INTO embeddings (name, vector, metadata) VALUES ($1, $2, $3) RETURNING id",
+                &[&name, &vector, &metadata],
+            )
+            .await?;
+
         Ok(row.get(0))
     }
 
     /// Search similar embeddings using pgvector
-    pub async fn search_similar(&self, query: &[f32], limit: usize) -> Result<Vec<EmbeddingResult>> {
+    pub async fn search_similar(
+        &self,
+        query: &[f32],
+        limit: usize,
+    ) -> Result<Vec<EmbeddingResult>> {
         let client = self.pool.get().await?;
-        
-        let rows = client.query(
-            "SELECT id, name, 1 - (vector <=> $1) AS similarity, metadata 
+
+        let rows = client
+            .query(
+                "SELECT id, name, 1 - (vector <=> $1) AS similarity, metadata 
              FROM embeddings 
              ORDER BY vector <=> $1 
              LIMIT $2",
-            &[&query, &(limit as i64)]
-        ).await?;
-        
-        let results: Vec<EmbeddingResult> = rows.iter().map(|row| EmbeddingResult {
-            id: row.get(0),
-            name: row.get(1),
-            similarity: row.get(2),
-            metadata: row.get(3),
-        }).collect();
-        
+                &[&query, &(limit as i64)],
+            )
+            .await?;
+
+        let results: Vec<EmbeddingResult> = rows
+            .iter()
+            .map(|row| EmbeddingResult {
+                id: row.get(0),
+                name: row.get(1),
+                similarity: row.get(2),
+                metadata: row.get(3),
+            })
+            .collect();
+
         Ok(results)
     }
 }
@@ -97,18 +121,20 @@ mod tests {
     async fn test_store_and_search() -> Result<()> {
         let bridge = PgBridge::new("postgres://localhost/pheno").await?;
         bridge.init_schema().await?;
-        
-        let id = bridge.store_embedding(
-            "test",
-            vec![0.1; 1536],
-            serde_json::json!({"source": "test"})
-        ).await?;
-        
+
+        let id = bridge
+            .store_embedding(
+                "test",
+                vec![0.1; 1536],
+                serde_json::json!({"source": "test"}),
+            )
+            .await?;
+
         assert!(id > 0);
-        
+
         let results = bridge.search_similar(&vec![0.1; 1536], 5).await?;
         assert!(!results.is_empty());
-        
+
         Ok(())
     }
 }
