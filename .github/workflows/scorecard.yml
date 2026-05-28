@@ -5,7 +5,11 @@ concurrency:
 
 on:
 
-timeout-minutes: 10
+
+
+  timeout-minutes: 10
+
+
   branch_protection_rule:
   schedule:
     - cron: '17 3 * * 6'
@@ -17,7 +21,7 @@ permissions: read-all
 jobs:
   analysis:
     name: Scorecard analysis
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       security-events: write
       id-token: write
@@ -25,7 +29,7 @@ jobs:
       actions: read
 
     steps:
-      - uses: actions/checkout11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           persist-credentials: false
 
@@ -35,7 +39,7 @@ jobs:
           results_format: sarif
           publish_results: true
 
-      - uses: actions/upload-artifact043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
+      - uses: actions/upload-artifact@43fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
         with:
           name: SARIF file
           path: results.sarif
