@@ -9,13 +9,13 @@
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use surrealdb::engine::local::Db;
 use surrealdb::Surreal;
+use surrealdb::engine::local::Db;
 
-#[cfg(not(windows))]
-use surrealdb::engine::local::RocksDb;
 #[cfg(windows)]
 use surrealdb::engine::local::Mem;
+#[cfg(not(windows))]
+use surrealdb::engine::local::RocksDb;
 
 pub type RecordId = String;
 
@@ -35,7 +35,8 @@ impl PhenoSurreal {
     /// Store a skill with versioning via raw SQL
     pub async fn store_skill(&self, skill: Skill) -> Result<RecordId> {
         let data = serde_json::to_value(&skill)?;
-        let response: Option<serde_json::Value> = self.db
+        let response: Option<serde_json::Value> = self
+            .db
             .query("CREATE skill CONTENT $data RETURN id")
             .bind(("data", data))
             .await?
@@ -64,7 +65,8 @@ impl PhenoSurreal {
     /// Store a vector embedding via raw SQL
     pub async fn store_embedding(&self, embedding: Embedding) -> Result<RecordId> {
         let data = serde_json::to_value(&embedding)?;
-        let response: Option<serde_json::Value> = self.db
+        let response: Option<serde_json::Value> = self
+            .db
             .query("CREATE embedding CONTENT $data RETURN id")
             .bind(("data", data))
             .await?
@@ -80,8 +82,13 @@ impl PhenoSurreal {
     }
 
     /// Search similar embeddings using cosine distance
-    pub async fn search_similar(&self, query: &[f32], limit: usize) -> Result<Vec<ScoredEmbedding>> {
-        let results: Vec<serde_json::Value> = self.db
+    pub async fn search_similar(
+        &self,
+        query: &[f32],
+        limit: usize,
+    ) -> Result<Vec<ScoredEmbedding>> {
+        let results: Vec<serde_json::Value> = self
+            .db
             .query(
                 "SELECT *, vector::distance::cosine(embedding, $query) AS score \
                  FROM embedding ORDER BY score ASC LIMIT $limit",
@@ -114,16 +121,19 @@ async fn open_local_db(path: impl Into<String>) -> Result<Surreal<Db>> {
 /// Extract a `RecordId` string from a `{"id": ...}` JSON value.
 /// Handles both `{"id": "table:id"}` string form and `{"id": {"tb": "table", "id": "..."}}` object form.
 fn extract_record_id(v: &serde_json::Value) -> Result<RecordId> {
-    let id_val = v.get("id")
+    let id_val = v
+        .get("id")
         .ok_or_else(|| anyhow::anyhow!("no 'id' field"))?;
 
     match id_val {
         serde_json::Value::String(s) => Ok(s.clone()),
         serde_json::Value::Object(o) => {
-            let tb = o.get("tb")
+            let tb = o
+                .get("tb")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| anyhow::anyhow!("id object missing 'tb'"))?;
-            let id = o.get("id")
+            let id = o
+                .get("id")
                 .and_then(|v| v.as_str().map(str::to_string))
                 .or_else(|| o.get("id").and_then(|v| v.as_i64().map(|i| i.to_string())))
                 .ok_or_else(|| anyhow::anyhow!("id object missing 'id'"))?;
@@ -184,7 +194,8 @@ mod tests {
     #[tokio::test]
     async fn test_create_skill() -> Result<()> {
         let dir = tempdir()?;
-        let db = PhenoSurreal::new(dir.path().join("test.db").to_string_lossy().into_owned()).await?;
+        let db =
+            PhenoSurreal::new(dir.path().join("test.db").to_string_lossy().into_owned()).await?;
 
         let skill = Skill::new(
             "test-skill".to_string(),

@@ -66,42 +66,48 @@ impl QueryPlanner {
     /// Plan query for SurrealDB
     pub fn plan_surreal(req: &QueryRequest) -> String {
         let mut query = format!("SELECT * FROM {}", req.collection);
-        
+
         if let Some(ref filter) = req.filter {
-            query.push_str(&format!(" WHERE {} {} {}", 
+            query.push_str(&format!(
+                " WHERE {} {} {}",
                 filter.field,
                 Self::op_to_string(&filter.operator),
                 filter.value
             ));
         }
-        
+
         if let Some(ref _vec) = req.vector {
             query.push_str(&format!(" FETCH {}", req.collection));
         }
-        
+
         query.push_str(&format!(" LIMIT {}", req.limit));
-        
+
         if let Some(offset) = req.offset {
             query.push_str(&format!(" START {}", offset));
         }
-        
+
         query
     }
 
     /// Plan query for PostgreSQL
     pub fn plan_postgres(req: &QueryRequest) -> String {
         let mut query = format!("SELECT * FROM {}", req.collection);
-        
+
         if let Some(ref filter) = req.filter {
-            query.push_str(&format!(" WHERE {} {} {}", 
+            query.push_str(&format!(
+                " WHERE {} {} {}",
                 filter.field,
                 Self::op_to_string(&filter.operator),
                 filter.value
             ));
         }
-        
-        query.push_str(&format!(" LIMIT {} OFFSET {}", req.limit, req.offset.unwrap_or(0)));
-        
+
+        query.push_str(&format!(
+            " LIMIT {} OFFSET {}",
+            req.limit,
+            req.offset.unwrap_or(0)
+        ));
+
         query
     }
 
@@ -137,7 +143,7 @@ mod tests {
             limit: 10,
             offset: None,
         };
-        
+
         let query = QueryPlanner::plan_surreal(&req);
         assert!(query.contains("WHERE name = \"test\""));
         assert!(query.contains("LIMIT 10"));
