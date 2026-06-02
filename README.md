@@ -1,3 +1,6 @@
+> **Work state:** ACTIVE · **Progress:** `██████░░░░ 55%`
+> Rust data-layer crates (storage/surreal bridge); on main, audits landing · updated 2026-06-02
+
 > **Pinned references (Phenotype-org)**
 > - MSRV: see rust-toolchain.toml
 > - cargo-deny config: see deny.toml
