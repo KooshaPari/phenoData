@@ -53,9 +53,13 @@ Add the crate(s) you need to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-surreal-bridge = { path = "../phenoData/crates/surreal-bridge" }
-pg-bridge      = { path = "../phenoData/crates/pg-bridge" }
-pheno-query    = { path = "../phenoData/crates/pheno-query" }
+# Note: the following example uses `../phenoData/...` because it is written
+# from a *consumer* project's perspective. Inside this repo, replace
+# `../phenoData/...` with `./crates/...` (or omit `path` if the crate is
+# already in the workspace).
+surreal-bridge = { path = "./crates/surreal-bridge" }
+pg-bridge      = { path = "./crates/pg-bridge" }
+pheno-query    = { path = "./crates/pheno-query" }
 ```
 
 > First build compiles SurrealDB and pgvector bindings — expect a longer initial `cargo build`.
