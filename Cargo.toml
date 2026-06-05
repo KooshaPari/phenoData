@@ -3,7 +3,7 @@
 # Contains data-related crates:
 # - surreal-bridge: SurrealDB embedded integration
 # - pg-bridge: PostgreSQL/pgvector compatibility
-# - query: Unified query builder
+# - pheno-query: Unified query builder
 [workspace]
 members = [
     "crates/surreal-bridge",
