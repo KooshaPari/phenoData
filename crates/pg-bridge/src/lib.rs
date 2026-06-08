@@ -6,6 +6,7 @@ use anyhow::Result;
 use deadpool_postgres::{Config, ManagerConfig, Pool, RecyclingMethod, Runtime};
 use serde::{Deserialize, Serialize};
 use tokio_postgres::NoTls;
+use url::Url;
 
 /// PgBridge - PostgreSQL with pgvector
 pub struct PgBridge {
@@ -13,16 +14,27 @@ pub struct PgBridge {
 }
 
 impl PgBridge {
-    /// Create new PostgreSQL bridge with connection pool
+    /// Create new PostgreSQL bridge with connection pool from a connection string.
+    /// Supports standard PostgreSQL URI format:
+    /// `postgres://user:pass@host:port/dbname?sslmode=require`
     pub async fn new(conn_string: &str) -> Result<Self> {
+        let parsed = Url::parse(conn_string)
+            .map_err(|e| anyhow::anyhow!("invalid connection string: {}", e))?;
+
         let mut cfg = Config::new();
-        cfg.host = Some(
-            conn_string
-                .split('@')
-                .next_back()
-                .unwrap_or("localhost")
-                .to_string(),
-        );
+        cfg.host = parsed.host_str().map(|h| h.to_string());
+        cfg.port = parsed.port();
+        cfg.user = if parsed.username().is_empty() {
+            None
+        } else {
+            Some(parsed.username().to_string())
+        };
+        cfg.password = parsed.password().map(|p| p.to_string());
+        cfg.dbname = if parsed.path().trim_start_matches('/').is_empty() {
+            None
+        } else {
+            Some(parsed.path().trim_start_matches('/').to_string())
+        };
         cfg.manager = Some(ManagerConfig {
             recycling_method: RecyclingMethod::Fast,
         });

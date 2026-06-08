@@ -1,0 +1,51 @@
+version: "3"
+
+tasks:
+  default:
+    cmds:
+      - task: quality
+
+  quality:
+    desc: Run all quality checks (fmt, clippy, test, deny)
+    cmds:
+      - task: fmt
+      - task: clippy
+      - task: test
+      - task: deny
+
+  fmt:
+    desc: Check Rust formatting
+    cmds:
+      - cargo fmt --all -- --check
+
+  clippy:
+    desc: Run Clippy with all features
+    cmds:
+      - cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+  test:
+    desc: Run all tests
+    cmds:
+      - cargo test --workspace
+
+  deny:
+    desc: Run cargo-deny for audit and license checks
+    cmds:
+      - cargo deny check
+
+  machete:
+    desc: Find unused dependencies
+    cmds:
+      - cargo machete
+
+  docs:
+    desc: Build and serve VitePress docs
+    dir: docs
+    cmds:
+      - npm run docs:build
+
+  docs:dev:
+    desc: Serve VitePress docs locally
+    dir: docs
+    cmds:
+      - npm run docs:dev

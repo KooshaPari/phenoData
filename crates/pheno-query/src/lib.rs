@@ -5,6 +5,27 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use std::collections::HashMap;
+
+/// Parameterized query statement
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct QueryStatement {
+    pub sql: String,
+    pub params: HashMap<String, serde_json::Value>,
+}
+
+impl QueryStatement {
+    /// Add a positional parameter
+    pub fn param(mut self, key: &str, value: impl Into<serde_json::Value>) -> Self {
+        self.params.insert(key.to_string(), value.into());
+        self
+    }
+}
+
+/// Query port for hexagonal architecture
+pub trait QueryPort {
+    fn plan(&self, req: &QueryRequest) -> Result<QueryStatement>;
+}
 
 #[derive(Error, Debug)]
 pub enum QueryError {
@@ -56,59 +77,79 @@ pub struct QueryResponse<T> {
 
 /// Query builder trait
 pub trait QueryBuilder {
-    fn build(&self) -> Result<String>;
+    fn build(&self) -> Result<QueryStatement>;
 }
 
-/// Simple query planner
+/// Query planner with parameterized query support
 pub struct QueryPlanner;
 
 impl QueryPlanner {
-    /// Plan query for SurrealDB
-    pub fn plan_surreal(req: &QueryRequest) -> String {
+    /// Plan query for SurrealDB (parameterized)
+    pub fn plan_surreal(req: &QueryRequest) -> QueryStatement {
         let mut query = format!("SELECT * FROM {}", req.collection);
+        let mut params = HashMap::new();
+        let mut param_idx = 0;
 
         if let Some(ref filter) = req.filter {
+            let param_key = format!("p{param_idx}");
+            param_idx += 1;
+            params.insert(param_key.clone(), filter.value.clone());
             query.push_str(&format!(
-                " WHERE {} {} {}",
+                " WHERE {} {} $[\"{}\"]",
                 filter.field,
                 Self::op_to_string(&filter.operator),
-                filter.value
+                param_key
             ));
         }
 
         if let Some(ref _vec) = req.vector {
-            query.push_str(&format!(" FETCH {}", req.collection));
+            // TODO: Implement proper vector search with NEAR or similar
+            query.push_str(&format!(" LIMIT {}", req.limit));
+        } else {
+            query.push_str(&format!(" LIMIT {}", req.limit));
         }
-
-        query.push_str(&format!(" LIMIT {}", req.limit));
 
         if let Some(offset) = req.offset {
             query.push_str(&format!(" START {}", offset));
         }
 
-        query
+        QueryStatement { sql: query, params }
     }
 
-    /// Plan query for PostgreSQL
-    pub fn plan_postgres(req: &QueryRequest) -> String {
+    /// Plan query for PostgreSQL (parameterized)
+    pub fn plan_postgres(req: &QueryRequest) -> QueryStatement {
         let mut query = format!("SELECT * FROM {}", req.collection);
+        let mut params = HashMap::new();
+        let mut param_idx = 0;
 
         if let Some(ref filter) = req.filter {
+            let param_key = format!("${}", param_idx + 1);
+            param_idx += 1;
+            params.insert(param_key.clone(), filter.value.clone());
             query.push_str(&format!(
                 " WHERE {} {} {}",
-                filter.field,
+                Self::pg_escape_identifier(&filter.field),
                 Self::op_to_string(&filter.operator),
-                filter.value
+                param_key
             ));
         }
 
-        query.push_str(&format!(
-            " LIMIT {} OFFSET {}",
-            req.limit,
-            req.offset.unwrap_or(0)
-        ));
+        query.push_str(&format!(" LIMIT {}", req.limit));
+        if let Some(offset) = req.offset {
+            query.push_str(&format!(" OFFSET {}", offset));
+        }
 
-        query
+        QueryStatement { sql: query, params }
+    }
+
+    fn pg_escape_identifier(ident: &str) -> String {
+        // Only allow alphanumeric and underscore to prevent injection
+        if ident.chars().all(|c| c.is_alphanumeric() || c == '_') {
+            ident.to_string()
+        } else {
+            // Reject invalid identifiers
+            String::new()
+        }
     }
 
     fn op_to_string(op: &FilterOperator) -> &'static str {
@@ -144,8 +185,45 @@ mod tests {
             offset: None,
         };
 
-        let query = QueryPlanner::plan_surreal(&req);
-        assert!(query.contains("WHERE name = \"test\""));
-        assert!(query.contains("LIMIT 10"));
+        let stmt = QueryPlanner::plan_surreal(&req);
+        assert!(stmt.sql.contains("WHERE name = $[\"p0\"]"));
+        assert!(stmt.sql.contains("LIMIT 10"));
+        assert_eq!(stmt.params.get("p0"), Some(&serde_json::json!("test")));
+    }
+
+    #[test]
+    fn test_plan_postgres() {
+        let req = QueryRequest {
+            collection: "skills".to_string(),
+            filter: Some(Filter {
+                field: "name".to_string(),
+                operator: FilterOperator::Eq,
+                value: serde_json::json!("test"),
+            }),
+            vector: None,
+            limit: 10,
+            offset: Some(5),
+        };
+
+        let stmt = QueryPlanner::plan_postgres(&req);
+        assert!(stmt.sql.contains("WHERE name = $1"));
+        assert!(stmt.sql.contains("LIMIT 10"));
+        assert!(stmt.sql.contains("OFFSET 5"));
+        assert_eq!(stmt.params.get("$1"), Some(&serde_json::json!("test")));
+    }
+
+    #[test]
+    fn test_plan_no_filter() {
+        let req = QueryRequest {
+            collection: "skills".to_string(),
+            filter: None,
+            vector: None,
+            limit: 10,
+            offset: None,
+        };
+
+        let stmt = QueryPlanner::plan_surreal(&req);
+        assert!(!stmt.sql.contains("WHERE"));
+        assert!(stmt.sql.contains("LIMIT 10"));
     }
 }
