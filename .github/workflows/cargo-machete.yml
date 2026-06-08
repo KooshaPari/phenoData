@@ -1,6 +1,21 @@
 name: cargo-machete
+permissions:
+  contents: read
+  pull-requests: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 
 on:
+
+
+
+
+  timeout-minutes: 10
+
+
+
   push:
     branches: [main]
     paths: ['Cargo.toml', '**/Cargo.toml']
@@ -12,7 +27,7 @@ on:
 
 jobs:
   machete:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5@11bd71901bbe5b1630ceea73d27597364c9af683
-      - uses: bnjbvr/cargo-machete@main
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: bnjbvr/cargo-machete@5cab879e5357f06fb126e7e53048e2f11620f856

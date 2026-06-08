@@ -1,12 +1,16 @@
 name: Monthly SBOM Refresh
+permissions:
+  contents: read
+  pull-requests: read
 on:
   schedule:
     - cron: '0 0 1 * *'  # 1st of each month
   workflow_dispatch:
+  timeout-minutes: 15
 
 jobs:
   call-sbom-refresh:
-    uses: KooshaPari/phenotype-tooling/.github/workflows/sbom-monthly.yml@main
+    uses: KooshaPari/phenotype-tooling/.github/workflows/sbom-monthly.yml@429213d4615f720073994a73734c82332fe56627
     with:
       repo_path: '.'
       build_system: 'rust'

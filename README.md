@@ -129,6 +129,8 @@ just coverage-lcov      # lcov.info at repo root (CI artifact)
 To bypass the threshold locally, drop the `--fail-under-lines` flag from the
 recipe — but keep CI strict.
 
+Integration smoke tests live in `crates/smoke-tests/tests/smoke.rs` and are part of the workspace test run.
+
 ## Docs
 
 ```bash
