@@ -11,8 +11,13 @@
 # PhenoData — Data Layer Workspace
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI](https://github.com/KooshaPari/phenoData/actions/workflows/ci.yml/badge.svg)](https://github.com/KooshaPari/phenoData/actions/workflows/ci.yml)
+[![Coverage](https://github.com/KooshaPari/phenoData/actions/workflows/coverage.yml/badge.svg)](https://github.com/KooshaPari/phenoData/actions/workflows/coverage.yml)
 [![Quality Gate](https://github.com/KooshaPari/phenoData/actions/workflows/quality-gate.yml/badge.svg)](https://github.com/KooshaPari/phenoData/actions/workflows/quality-gate.yml)
+[![Gitleaks](https://github.com/KooshaPari/phenoData/actions/workflows/gitleaks.yml/badge.svg)](https://github.com/KooshaPari/phenoData/actions/workflows/gitleaks.yml)
+[![CodeQL (Rust)](https://github.com/KooshaPari/phenoData/actions/workflows/codeql-rust.yml/badge.svg)](https://github.com/KooshaPari/phenoData/actions/workflows/codeql-rust.yml)
 [![Docs](https://github.com/KooshaPari/phenoData/actions/workflows/pages.yml/badge.svg)](https://github.com/KooshaPari/phenoData/actions/workflows/pages.yml)
+[![codecov](https://codecov.io/gh/KooshaPari/phenoData/branch/main/graph/badge.svg)](https://codecov.io/gh/KooshaPari/phenoData)
 [![Rust](https://img.shields.io/badge/rust-1.84%2B-orange.svg)](https://www.rust-lang.org)
 
 **Status:** maintenance
@@ -30,6 +35,29 @@ This workspace currently ships **3 crates** (verified against [`Cargo.toml`](./C
 | [`surreal-bridge`](./crates/surreal-bridge) | SurrealDB embedded integration (skill/embedding storage) |
 | [`pg-bridge`](./crates/pg-bridge) | PostgreSQL with `pgvector` for vector search |
 | [`pheno-query`](./crates/pheno-query) | Unified query planner across data stores |
+
+## Workspace layout
+
+```
+phenoData/
+├── Cargo.toml              # Workspace manifest (3 members, resolver = "3")
+├── Cargo.lock              # Locked dep graph (committed)
+├── justfile / Justfile     # Phenotype-org standard recipes
+├── tarpaulin.toml          # Coverage threshold baseline (see Coverage)
+├── deny.toml               # cargo-deny config (licenses, advisories, sources)
+├── rust-toolchain.toml     # Stable channel + rustfmt + clippy
+├── package.json            # VitePress docs sidecar
+├── bun.lock                # Locked docs deps
+├── docs/                   # VitePress site (published via GitHub Pages)
+├── crates/
+│   ├── surreal-bridge/     # SurrealDB embedded integration
+│   ├── pg-bridge/          # PostgreSQL + pgvector
+│   └── pheno-query/        # Unified query planner
+├── .github/
+│   ├── workflows/          # CI: ci, coverage, gitleaks, trufflehog, codeql-rust, ...
+│   └── dependabot.yml      # cargo + npm + github-actions (weekly, grouped)
+└── worklogs/               # Per-session agent work logs
+```
 
 ## Requirements
 
@@ -67,6 +95,39 @@ cargo build --workspace
 cargo test  --workspace
 cargo clippy --workspace -- -D warnings
 ```
+
+### Test
+
+The full test sweep runs the `ci.yml` job on every push and pull request:
+
+```bash
+# Local equivalent
+just test
+cargo test --workspace
+```
+
+`pg-bridge` integration tests skip cleanly when PostgreSQL with `pgvector` is
+not reachable (see `AGENTS.md` agent guardrails). No external services are
+required for the default test path.
+
+### Coverage
+
+Coverage is produced by [`cargo-llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov)
+in the [`coverage.yml`](.github/workflows/coverage.yml) CI job and uploaded to
+Codecov. The baseline threshold (60% line coverage) is mirrored between
+[`tarpaulin.toml`](./tarpaulin.toml) and the `--fail-under-lines` flag in CI.
+
+```bash
+# Install once
+cargo install cargo-llvm-cov --locked
+
+# Local equivalent of CI
+just coverage           # HTML report at target/llvm-cov/html/index.html
+just coverage-lcov      # lcov.info at repo root (CI artifact)
+```
+
+To bypass the threshold locally, drop the `--fail-under-lines` flag from the
+recipe — but keep CI strict.
 
 ## Docs
 

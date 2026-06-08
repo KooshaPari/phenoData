@@ -35,3 +35,11 @@ ci: lint test audit unused
 # Generate docs
 docs:
     cargo doc --no-deps --workspace
+
+# Generate HTML coverage report (cargo-llvm-cov; install with `cargo install cargo-llvm-cov --locked`)
+coverage:
+    cargo llvm-cov --workspace --html
+
+# Generate lcov.info (CI uses this artifact path)
+coverage-lcov:
+    cargo llvm-cov --workspace --lcov --output-path lcov.info

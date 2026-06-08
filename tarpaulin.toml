@@ -1,0 +1,25 @@
+# tarpaulin config for phenoData
+# ------------------------------------------------------------
+# Baseline coverage thresholds used by `cargo tarpaulin` and
+# mirrored by the `cargo-llvm-cov` CI job (see
+# `.github/workflows/coverage.yml`). Keep the two in sync.
+#
+# Threshold philosophy: 60% line coverage is the floor for the
+# data-layer workspace during maintenance; raise it per-crate in
+# `[*.workspace]` overrides as crates mature.
+
+[report]
+out = ["Html", "Xml", "Lcov"]
+output-dir = "target/coverage"
+
+[run]
+features = "all"
+workspace = true
+no-fail-fast = false
+lockfile = "Cargo.lock"
+
+[run.coverage]
+branch = true
+
+[clean]
+# tarpaulin's `cargo clean` is too aggressive for CI; let cargo handle it.

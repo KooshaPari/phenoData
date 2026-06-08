@@ -1,5 +1,7 @@
 version: 2
+
 updates:
+  # Rust workspace (3 crates: surreal-bridge, pg-bridge, pheno-query)
   - package-ecosystem: "cargo"
     directory: "/"
     schedule:
@@ -9,3 +11,34 @@ updates:
       cargo:
         patterns: ["*"]
     open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "rust"
+
+  # VitePress docs sidecar (package.json + bun.lock)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      npm:
+        patterns: ["*"]
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docs"
+
+  # GitHub Actions version bumps (pinned SHAs in workflows)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      github-actions:
+        patterns: ["*"]
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ci"

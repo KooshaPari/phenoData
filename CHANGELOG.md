@@ -9,14 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- 
+- **CI coverage** — new `coverage.yml` workflow runs `cargo-llvm-cov` over the workspace,
+  enforces a 60% line-coverage floor (`--fail-under-lines 60`), and uploads
+  `lcov.info` to Codecov plus a 14-day GitHub Actions artifact.
+- **`tarpaulin.toml`** — workspace coverage-threshold baseline (HTML, XML, Lcov
+  outputs; `--features all`; mirrors the CI `--fail-under-lines` value).
+- **Gitleaks workflow** (`gitleaks.yml`) — weekly + push/PR secret scan
+  complementing the existing TruffleHog jobs; pinned `gitleaks/gitleaks-action`.
+- **`just coverage`** and **`just coverage-lcov`** recipes (mirrored in both
+  `justfile` and `Justfile`) — local equivalents of the new CI coverage job.
+- **Dependabot coverage** — `.github/dependabot.yml` now tracks `cargo`, `npm`
+  (VitePress sidecar), and `github-actions` ecosystems, all weekly on Monday
+  with grouped PRs and labels (`dependencies` + ecosystem tag).
+- **README sections** — `Workspace layout`, `Test`, and `Coverage` sections
+  added with directory tree and `cargo-llvm-cov` usage.
 
 ### Changed
 
-- 
-
-### Fixed
-
-- 
+- `.github/dependabot.yml` extended from `cargo`-only to three ecosystems
+  (cargo + npm + github-actions) with grouping and labels.
 
 [Unreleased]: https://github.com/KooshaPari/phenoData/compare/main...HEAD
