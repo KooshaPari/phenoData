@@ -8,8 +8,12 @@
 //! primary API for anything beyond simple select/insert.
 
 use anyhow::Result;
+use pheno_data_core::{Dataset, DatasetFuture, Record};
 use pheno_query::{QueryPort, QueryRequest, QueryStatement, SurrealQueryPlanner};
 use serde::{Deserialize, Serialize};
+use std::future::Future;
+use std::pin::Pin;
+use std::sync::Arc;
 use surrealdb::Surreal;
 use surrealdb::engine::local::Db;
 
@@ -19,12 +23,46 @@ use surrealdb::engine::local::Mem;
 use surrealdb::engine::local::RocksDb;
 
 pub type RecordId = String;
+type LoaderFuture = Pin<Box<dyn Future<Output = Result<Vec<Record>>> + Send>>;
+type SchemaFuture = Pin<Box<dyn Future<Output = Result<serde_json::Value>> + Send>>;
+type RecordsLoader = dyn Fn() -> LoaderFuture + Send + Sync;
+type SchemaLoader = dyn Fn() -> SchemaFuture + Send + Sync;
 
 /// PhenoSurreal - SurrealDB with extensions
 pub struct PhenoSurreal {
     db: Surreal<Db>,
     /// Embedded planner so `QueryPort::plan` is `&self`-callable.
     planner: SurrealQueryPlanner,
+}
+
+pub struct SurrealDataset {
+    records_loader: Arc<RecordsLoader>,
+    schema_loader: Arc<SchemaLoader>,
+}
+
+impl SurrealDataset {
+    pub fn new<RL, RF, SL, SF>(records_loader: RL, schema_loader: SL) -> Self
+    where
+        RL: Fn() -> RF + Send + Sync + 'static,
+        RF: Future<Output = Result<Vec<Record>>> + Send + 'static,
+        SL: Fn() -> SF + Send + Sync + 'static,
+        SF: Future<Output = Result<serde_json::Value>> + Send + 'static,
+    {
+        Self {
+            records_loader: Arc::new(move || Box::pin(records_loader())),
+            schema_loader: Arc::new(move || Box::pin(schema_loader())),
+        }
+    }
+}
+
+impl Dataset for SurrealDataset {
+    fn records(&self) -> DatasetFuture<Vec<Record>> {
+        (self.records_loader)()
+    }
+
+    fn schema(&self) -> DatasetFuture<serde_json::Value> {
+        (self.schema_loader)()
+    }
 }
 
 impl QueryPort for PhenoSurreal {
@@ -203,6 +241,7 @@ pub struct ScoredEmbedding {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pheno_data_core::Dataset;
     use tempfile::tempdir;
 
     #[tokio::test]

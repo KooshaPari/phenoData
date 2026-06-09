@@ -92,6 +92,24 @@ pub trait QueryBuilder {
 /// Query planner with parameterized query support
 pub struct QueryPlanner;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Backend {
+    Surreal,
+    Postgres,
+}
+
+pub fn load(source: &str) -> Result<Backend> {
+    if source.starts_with("surreal://") {
+        return Ok(Backend::Surreal);
+    }
+
+    if source.starts_with("postgres://") || source.starts_with("postgresql://") {
+        return Ok(Backend::Postgres);
+    }
+
+    Err(anyhow::anyhow!("unsupported dataset backend: {source}"))
+}
+
 impl QueryPlanner {
     /// Plan query for SurrealDB (parameterized)
     pub fn plan_surreal(req: &QueryRequest) -> QueryStatement {
