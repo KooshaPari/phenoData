@@ -1,3 +1,14 @@
+## Work State
+
+| Field | Value |
+|---|---|
+| Last commit | 2026-06-08 18:49:21 -0700 |
+| Open issues | unknown (GitHub API rate-limited) |
+| Open PRs | unknown (GitHub API rate-limited) |
+| Focus | Data-layer crates and SurrealDB integration |
+
+Progress: ████████░░ 80%
+
 > **Work state:** ACTIVE · **Progress:** `██████░░░░ 55%`
 > Rust data-layer crates (storage/surreal bridge); on main, audits landing · updated 2026-06-02
 
