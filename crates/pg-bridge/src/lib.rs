@@ -1,9 +1,16 @@
 //! PostgreSQL Bridge - PostgreSQL with pgvector for Pheno
 //!
 //! Provides pgvector-compatible vector search with PostgreSQL.
+//!
+//! # Hexagonal port (D19)
+//!
+//! `PgBridge` implements the [`pheno_query::QueryPort`] trait so domain
+//! code can depend on the trait only. Planning delegates to
+//! [`pheno_query::PostgresQueryPlanner`].
 
 use anyhow::Result;
 use deadpool_postgres::{Config, ManagerConfig, Pool, RecyclingMethod, Runtime};
+use pheno_query::{QueryPort, QueryRequest, QueryStatement};
 use serde::{Deserialize, Serialize};
 use tokio_postgres::NoTls;
 use url::Url;
@@ -11,6 +18,18 @@ use url::Url;
 /// PgBridge - PostgreSQL with pgvector
 pub struct PgBridge {
     pool: Pool,
+    /// Embedded planner so `QueryPort::plan` is `&self`-callable.
+    planner: pheno_query::PostgresQueryPlanner,
+}
+
+impl QueryPort for PgBridge {
+    fn plan(&self, req: &QueryRequest) -> Result<QueryStatement> {
+        // Delegate to the embedded planner. The bridge owns no extra
+        // planning state; this is a thin dispatch to keep the hexagonal
+        // contract concrete (callers can hold `&dyn QueryPort` and call
+        // `plan` on any backend).
+        self.planner.plan(req)
+    }
 }
 
 impl PgBridge {
@@ -41,7 +60,10 @@ impl PgBridge {
 
         let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls)?;
 
-        Ok(Self { pool })
+        Ok(Self {
+            pool,
+            planner: pheno_query::PostgresQueryPlanner,
+        })
     }
 
     /// Initialize pgvector extension and tables
