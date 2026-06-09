@@ -4,8 +4,8 @@
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 use std::collections::HashMap;
+use thiserror::Error;
 
 /// Parameterized query statement
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -88,11 +88,9 @@ impl QueryPlanner {
     pub fn plan_surreal(req: &QueryRequest) -> QueryStatement {
         let mut query = format!("SELECT * FROM {}", req.collection);
         let mut params = HashMap::new();
-        let mut param_idx = 0;
 
         if let Some(ref filter) = req.filter {
-            let param_key = format!("p{param_idx}");
-            param_idx += 1;
+            let param_key = "p0".to_string();
             params.insert(param_key.clone(), filter.value.clone());
             query.push_str(&format!(
                 " WHERE {} {} $[\"{}\"]",
@@ -102,12 +100,7 @@ impl QueryPlanner {
             ));
         }
 
-        if let Some(ref _vec) = req.vector {
-            // TODO: Implement proper vector search with NEAR or similar
-            query.push_str(&format!(" LIMIT {}", req.limit));
-        } else {
-            query.push_str(&format!(" LIMIT {}", req.limit));
-        }
+        query.push_str(&format!(" LIMIT {}", req.limit));
 
         if let Some(offset) = req.offset {
             query.push_str(&format!(" START {}", offset));
@@ -120,11 +113,9 @@ impl QueryPlanner {
     pub fn plan_postgres(req: &QueryRequest) -> QueryStatement {
         let mut query = format!("SELECT * FROM {}", req.collection);
         let mut params = HashMap::new();
-        let mut param_idx = 0;
 
         if let Some(ref filter) = req.filter {
-            let param_key = format!("${}", param_idx + 1);
-            param_idx += 1;
+            let param_key = "$1".to_string();
             params.insert(param_key.clone(), filter.value.clone());
             query.push_str(&format!(
                 " WHERE {} {} {}",
@@ -225,5 +216,189 @@ mod tests {
         let stmt = QueryPlanner::plan_surreal(&req);
         assert!(!stmt.sql.contains("WHERE"));
         assert!(stmt.sql.contains("LIMIT 10"));
+    }
+
+    #[test]
+    fn test_query_statement_param_builder() {
+        // QueryStatement::param is the public builder for inserting named parameters.
+        // It must accept any Into<serde_json::Value>, preserve insertion order semantics
+        // (HashMap is unordered, so we assert by lookup), and return Self for chaining.
+        let stmt = QueryStatement::default()
+            .param("name", "alice")
+            .param("count", 7i64)
+            .param("active", true)
+            .param("tags", serde_json::json!(["a", "b"]));
+
+        assert_eq!(stmt.sql, "", "default sql should be empty");
+        assert_eq!(stmt.params.len(), 4, "all four params should be stored");
+        assert_eq!(
+            stmt.params.get("name"),
+            Some(&serde_json::json!("alice"))
+        );
+        assert_eq!(
+            stmt.params.get("count"),
+            Some(&serde_json::json!(7))
+        );
+        assert_eq!(
+            stmt.params.get("active"),
+            Some(&serde_json::json!(true))
+        );
+        assert_eq!(
+            stmt.params.get("tags"),
+            Some(&serde_json::json!(["a", "b"]))
+        );
+    }
+
+    #[test]
+    fn test_pg_escape_identifier_rejects_injection() {
+        // Malicious identifiers should be rejected (return empty string)
+        assert_eq!(QueryPlanner::pg_escape_identifier("users; DROP TABLE users;--"), "");
+        assert_eq!(QueryPlanner::pg_escape_identifier("users\""), "");
+        assert_eq!(QueryPlanner::pg_escape_identifier("users'"), "");
+        assert_eq!(QueryPlanner::pg_escape_identifier("users\\"), "");
+        // Valid identifiers should pass through
+        assert_eq!(QueryPlanner::pg_escape_identifier("users"), "users");
+        assert_eq!(QueryPlanner::pg_escape_identifier("user_profiles"), "user_profiles");
+    }
+
+    #[test]
+    fn test_plan_postgres_with_offset() {
+        let req = QueryRequest {
+            collection: "events".to_string(),
+            filter: None,
+            vector: None,
+            limit: 25,
+            offset: Some(100),
+        };
+        let stmt = QueryPlanner::plan_postgres(&req);
+        assert!(stmt.sql.contains("LIMIT 25"));
+        assert!(stmt.sql.contains("OFFSET 100"));
+        assert!(!stmt.sql.contains("WHERE"));
+    }
+
+    #[test]
+    fn test_filter_operators_all() {
+        let ops = vec![
+            (FilterOperator::Eq, "="),
+            (FilterOperator::Ne, "!="),
+            (FilterOperator::Gt, ">"),
+            (FilterOperator::Gte, ">="),
+            (FilterOperator::Lt, "<"),
+            (FilterOperator::Lte, "<="),
+            (FilterOperator::Contains, "LIKE"),
+            (FilterOperator::StartsWith, "LIKE"),
+            (FilterOperator::EndsWith, "LIKE"),
+        ];
+        for (op, expected) in ops {
+            let req = QueryRequest {
+                collection: "test".to_string(),
+                filter: Some(Filter {
+                    field: "x".to_string(),
+                    operator: op,
+                    value: serde_json::json!(1),
+                }),
+                vector: None,
+                limit: 1,
+                offset: None,
+            };
+            let stmt = QueryPlanner::plan_postgres(&req);
+            assert!(stmt.sql.contains(expected), "operator {:?} should produce {}", op, expected);
+        }
+    }
+
+    #[test]
+    fn test_query_statement_chaining() {
+        let stmt = QueryStatement::default()
+            .param("a", 1)
+            .param("b", "two")
+            .param("c", true);
+        assert_eq!(stmt.params.len(), 3);
+        assert_eq!(stmt.params.get("a"), Some(&serde_json::json!(1)));
+        assert_eq!(stmt.params.get("b"), Some(&serde_json::json!("two")));
+        assert_eq!(stmt.params.get("c"), Some(&serde_json::json!(true)));
+    }
+
+    // Property-based tests: generate random query requests and verify invariants
+    use proptest::prelude::*;
+
+    prop_compose! {
+        fn arb_query_request()
+            (collection in "[a-zA-Z_]{1,20}",
+             limit in 1usize..1000usize,
+             offset in proptest::option::of(0usize..1000usize),
+             has_filter in proptest::bool::ANY)
+            -> QueryRequest {
+            let filter = if has_filter {
+                Some(Filter {
+                    field: "field".to_string(),
+                    operator: FilterOperator::Eq,
+                    value: serde_json::json!("value"),
+                })
+            } else {
+                None
+            };
+            QueryRequest {
+                collection,
+                filter,
+                vector: None,
+                limit,
+                offset,
+            }
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn prop_surreal_query_always_contains_select(req in arb_query_request()) {
+            let stmt = QueryPlanner::plan_surreal(&req);
+            prop_assert!(stmt.sql.contains("SELECT * FROM"));
+            prop_assert!(stmt.sql.contains(&req.collection));
+        }
+
+        #[test]
+        fn prop_postgres_query_always_contains_select(req in arb_query_request()) {
+            let stmt = QueryPlanner::plan_postgres(&req);
+            prop_assert!(stmt.sql.contains("SELECT * FROM"));
+            prop_assert!(stmt.sql.contains(&req.collection));
+        }
+
+        #[test]
+        fn prop_query_limit_always_present(req in arb_query_request()) {
+            let surreal = QueryPlanner::plan_surreal(&req);
+            let postgres = QueryPlanner::plan_postgres(&req);
+            prop_assert!(surreal.sql.contains(&format!("LIMIT {}", req.limit)));
+            prop_assert!(postgres.sql.contains(&format!("LIMIT {}", req.limit)));
+        }
+
+        #[test]
+        fn prop_filter_params_not_empty_when_filter_present(req in arb_query_request()) {
+            let stmt = QueryPlanner::plan_surreal(&req);
+            if req.filter.is_some() {
+                prop_assert!(!stmt.params.is_empty(), "filter present => params not empty");
+                prop_assert!(stmt.sql.contains("WHERE"), "filter present => WHERE clause");
+            } else {
+                prop_assert!(stmt.params.is_empty(), "no filter => no params");
+                prop_assert!(!stmt.sql.contains("WHERE"), "no filter => no WHERE");
+            }
+        }
+
+        #[test]
+        fn prop_escape_identifier_never_injects(req in "[a-zA-Z0-9_]{1,20}") {
+            let escaped = QueryPlanner::pg_escape_identifier(&req);
+            // Escaped identifier should never contain quotes or semicolons
+            prop_assert!(!escaped.contains('"'));
+            prop_assert!(!escaped.contains('\''));
+            prop_assert!(!escaped.contains(';'));
+        }
+
+        #[test]
+        fn prop_offset_always_present_when_set(req in arb_query_request()) {
+            let surreal = QueryPlanner::plan_surreal(&req);
+            let postgres = QueryPlanner::plan_postgres(&req);
+            if let Some(off) = req.offset {
+                prop_assert!(surreal.sql.contains(&format!("START {}", off)));
+                prop_assert!(postgres.sql.contains(&format!("OFFSET {}", off)));
+            }
+        }
     }
 }

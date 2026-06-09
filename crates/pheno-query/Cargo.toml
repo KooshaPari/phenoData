@@ -10,3 +10,10 @@ anyhow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+proptest = { version = "1.4", optional = true }
+
+[dev-dependencies]
+proptest = "1.4"
+
+[features]
+proptest = ["dep:proptest"]
