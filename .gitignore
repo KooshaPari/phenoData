@@ -2,8 +2,10 @@
 /.cache/
 /node_modules/
 /docs/.vitepress/dist/
-Cargo.lock
-Cargo.lock
+
+# Cargo.lock is committed for this library workspace
+# (consumed by downstream crates for reproducible builds).
+# See https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html
 
 # ===== Standard auto-generated hygiene ignores (do not edit manually) =====
 .DS_Store
