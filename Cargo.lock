@@ -2861,6 +2861,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "deadpool-postgres",
+ "pheno-query",
  "rustls",
  "serde",
  "serde_json",
@@ -2877,11 +2878,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
- "pg-bridge",
  "proptest",
  "serde",
  "serde_json",
- "surreal-bridge",
  "thiserror",
  "tokio",
 ]
@@ -4128,6 +4127,7 @@ name = "surreal-bridge"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "pheno-query",
  "serde",
  "serde_json",
  "surrealdb",

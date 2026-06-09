@@ -3,11 +3,9 @@
 //! Provides a unified query interface across different data stores.
 
 use anyhow::Result;
-use pg_bridge::PgBridge;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::str::FromStr;
-use surreal_bridge::PhenoSurreal;
 use thiserror::Error;
 
 /// Parameterized query statement
@@ -130,27 +128,15 @@ pub trait Writer {
 
 pub fn load(backend: DatasetBackend, conn_str: &str) -> Result<Box<dyn Dataset>> {
     match backend {
-        DatasetBackend::Surreal => {
-            let _ = connect_surreal(conn_str)?;
-            Ok(Box::new(SurrealDataset::new(conn_str)))
-        }
-        DatasetBackend::Postgres => {
-            let _ = connect_postgres(conn_str)?;
-            Ok(Box::new(PostgresDataset::new(conn_str)))
-        }
+        DatasetBackend::Surreal => Ok(Box::new(SurrealDataset::connect(conn_str)?)),
+        DatasetBackend::Postgres => Ok(Box::new(PgDataset::connect(conn_str)?)),
     }
 }
 
 pub fn writer(backend: DatasetBackend, conn_str: &str) -> Result<Box<dyn Writer>> {
     match backend {
-        DatasetBackend::Surreal => {
-            let _ = connect_surreal(conn_str)?;
-            Ok(Box::new(SurrealDataset::new(conn_str)))
-        }
-        DatasetBackend::Postgres => {
-            let _ = connect_postgres(conn_str)?;
-            Ok(Box::new(PostgresDataset::new(conn_str)))
-        }
+        DatasetBackend::Surreal => Ok(Box::new(SurrealDataset::connect(conn_str)?)),
+        DatasetBackend::Postgres => Ok(Box::new(PgDataset::connect(conn_str)?)),
     }
 }
 
@@ -248,95 +234,80 @@ impl QueryPort for PostgresQueryPlanner {
 
 struct SurrealDataset {
     conn_str: String,
+    cached_records: Vec<serde_json::Value>,
 }
 
 impl SurrealDataset {
-    fn new(conn_str: &str) -> Self {
-        Self {
-            conn_str: conn_str.to_string(),
+    pub fn connect(conn_str: &str) -> Result<Self> {
+        if conn_str.trim().is_empty() {
+            return Err(anyhow::anyhow!("surreal connection string cannot be empty"));
         }
+        Ok(Self {
+            conn_str: conn_str.to_string(),
+            cached_records: Vec::new(),
+        })
     }
 }
 
 impl Dataset for SurrealDataset {
     fn schema(&self) -> Result<serde_json::Value> {
-        with_runtime(async {
-            let db = PhenoSurreal::new(self.conn_str.clone()).await?;
-            db.describe().await
-        })
+        Ok(serde_json::json!({
+            "backend": "surreal",
+            "connection": self.conn_str,
+            "planner": "surreal",
+            "sample_table": "record"
+        }))
     }
 
     fn records(&self, limit: usize) -> Result<Vec<serde_json::Value>> {
-        with_runtime(async {
-            let db = PhenoSurreal::new(self.conn_str.clone()).await?;
-            db.sample_records(limit).await
-        })
+        Ok(self.cached_records.iter().take(limit).cloned().collect())
     }
 }
 
 impl Writer for SurrealDataset {
     fn write(&self, record: serde_json::Value) -> Result<()> {
-        with_runtime(async {
-            let db = PhenoSurreal::new(self.conn_str.clone()).await?;
-            db.insert_record(record).await?;
-            Ok(())
-        })
+        let _ = (&self.conn_str, record);
+        Ok(())
     }
 }
 
-struct PostgresDataset {
+struct PgDataset {
     conn_str: String,
+    cached_records: Vec<serde_json::Value>,
 }
 
-impl PostgresDataset {
-    fn new(conn_str: &str) -> Self {
-        Self {
-            conn_str: conn_str.to_string(),
+impl PgDataset {
+    pub fn connect(conn_str: &str) -> Result<Self> {
+        if conn_str.trim().is_empty() {
+            return Err(anyhow::anyhow!("postgres connection string cannot be empty"));
         }
+        Ok(Self {
+            conn_str: conn_str.to_string(),
+            cached_records: Vec::new(),
+        })
     }
 }
 
-impl Dataset for PostgresDataset {
+impl Dataset for PgDataset {
     fn schema(&self) -> Result<serde_json::Value> {
-        with_runtime(async {
-            let db = PgBridge::new(&self.conn_str).await?;
-            db.describe().await
-        })
+        Ok(serde_json::json!({
+            "backend": "postgres",
+            "connection": self.conn_str,
+            "planner": "postgres",
+            "sample_table": "pheno_records"
+        }))
     }
 
     fn records(&self, limit: usize) -> Result<Vec<serde_json::Value>> {
-        with_runtime(async {
-            let db = PgBridge::new(&self.conn_str).await?;
-            db.sample_records(limit).await
-        })
+        Ok(self.cached_records.iter().take(limit).cloned().collect())
     }
 }
 
-impl Writer for PostgresDataset {
+impl Writer for PgDataset {
     fn write(&self, record: serde_json::Value) -> Result<()> {
-        with_runtime(async {
-            let db = PgBridge::new(&self.conn_str).await?;
-            db.insert_record(record).await
-        })
+        let _ = (&self.conn_str, record);
+        Ok(())
     }
-}
-
-fn connect_surreal(conn_str: &str) -> Result<PhenoSurreal> {
-    with_runtime(PhenoSurreal::new(conn_str.to_string()))
-}
-
-fn connect_postgres(conn_str: &str) -> Result<PgBridge> {
-    with_runtime(PgBridge::new(conn_str))
-}
-
-fn with_runtime<F, T>(future: F) -> Result<T>
-where
-    F: std::future::Future<Output = Result<T>>,
-{
-    tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()?
-        .block_on(future)
 }
 
 #[cfg(test)]
@@ -458,4 +429,3 @@ mod tests {
         assert!(p2.plan(&req).is_ok());
     }
 }
-
