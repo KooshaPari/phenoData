@@ -6,6 +6,7 @@
 # - query: Unified query builder
 [workspace]
 members = [
+    "crates/pheno-data-core",
     "crates/surreal-bridge",
     "crates/pg-bridge",
     "crates/pheno-query",
@@ -22,3 +23,4 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0"
 anyhow = "1.0"
+async-trait = "0.1"

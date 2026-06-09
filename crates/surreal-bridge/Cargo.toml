@@ -10,6 +10,8 @@ anyhow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+async-trait = { workspace = true }
+pheno-data-core = { path = "../pheno-data-core" }
 pheno-query = { path = "../pheno-query" }
 # SurrealDB embedded — RocksDB on Unix; in-memory on Windows (no C++ toolchain required)
 [target.'cfg(not(windows))'.dependencies]

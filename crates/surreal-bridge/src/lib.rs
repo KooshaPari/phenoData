@@ -8,6 +8,8 @@
 //! primary API for anything beyond simple select/insert.
 
 use anyhow::Result;
+use async_trait::async_trait;
+use pheno_data_core::{Dataset, DatasetSchema, Record, Writer};
 use pheno_query::{QueryPort, QueryRequest, QueryStatement, SurrealQueryPlanner};
 use serde::{Deserialize, Serialize};
 use surrealdb::Surreal;
@@ -19,6 +21,83 @@ use surrealdb::engine::local::Mem;
 use surrealdb::engine::local::RocksDb;
 
 pub type RecordId = String;
+
+const DATASET_TABLE: &str = "pheno_dataset_record";
+
+/// Hexagonal Dataset adapter for SurrealDB.
+pub struct SurrealDataset {
+    db: Surreal<Db>,
+}
+
+impl SurrealDataset {
+    pub async fn connect(url: &str) -> Result<Self> {
+        let db = open_local_db(url.to_string()).await?;
+        db.use_ns("pheno").use_db("main").await?;
+        Ok(Self { db })
+    }
+}
+
+#[async_trait]
+impl Dataset for SurrealDataset {
+    async fn records(&self) -> Result<Vec<Record>> {
+        let rows: Vec<serde_json::Value> = self
+            .db
+            .query(format!("SELECT payload FROM {}", DATASET_TABLE))
+            .await?
+            .take(0)?;
+
+        Ok(rows
+            .into_iter()
+            .filter_map(|row| row.get("payload").cloned())
+            .collect())
+    }
+
+    async fn schema(&self) -> Result<DatasetSchema> {
+        Ok(serde_json::json!({
+            "backend": "surrealdb",
+            "namespace": "pheno",
+            "database": "main",
+            "table": DATASET_TABLE,
+            "record_format": "json"
+        }))
+    }
+
+    async fn close(&self) -> Result<()> {
+        Ok(())
+    }
+}
+
+/// Hexagonal Writer adapter for SurrealDB.
+pub struct SurrealWriter {
+    db: Surreal<Db>,
+}
+
+impl SurrealWriter {
+    pub async fn connect(url: &str) -> Result<Self> {
+        let db = open_local_db(url.to_string()).await?;
+        db.use_ns("pheno").use_db("main").await?;
+        Ok(Self { db })
+    }
+}
+
+#[async_trait]
+impl Writer for SurrealWriter {
+    async fn write(&self, record: Record) -> Result<()> {
+        self.db
+            .query(format!("CREATE {} CONTENT $data", DATASET_TABLE))
+            .bind(("data", serde_json::json!({ "payload": record })))
+            .await?;
+        Ok(())
+    }
+
+    async fn flush(&self) -> Result<()> {
+        Ok(())
+    }
+
+    async fn close(&self) -> Result<()> {
+        Ok(())
+    }
+}
 
 /// PhenoSurreal - SurrealDB with extensions
 pub struct PhenoSurreal {

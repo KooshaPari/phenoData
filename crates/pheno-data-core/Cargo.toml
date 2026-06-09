@@ -1,0 +1,10 @@
+[package]
+name = "pheno-data-core"
+version = "0.1.0"
+edition = "2024"
+description = "Core hexagonal Dataset and Writer ports for Pheno data adapters"
+
+[dependencies]
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+serde_json = { workspace = true }
