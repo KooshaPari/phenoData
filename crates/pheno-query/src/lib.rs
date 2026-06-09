@@ -4,8 +4,8 @@
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 use std::collections::HashMap;
+use thiserror::Error;
 
 /// Parameterized query statement
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -88,11 +88,9 @@ impl QueryPlanner {
     pub fn plan_surreal(req: &QueryRequest) -> QueryStatement {
         let mut query = format!("SELECT * FROM {}", req.collection);
         let mut params = HashMap::new();
-        let mut param_idx = 0;
 
         if let Some(ref filter) = req.filter {
-            let param_key = format!("p{param_idx}");
-            param_idx += 1;
+            let param_key = "p0".to_string();
             params.insert(param_key.clone(), filter.value.clone());
             query.push_str(&format!(
                 " WHERE {} {} $[\"{}\"]",
@@ -102,12 +100,7 @@ impl QueryPlanner {
             ));
         }
 
-        if let Some(ref _vec) = req.vector {
-            // TODO: Implement proper vector search with NEAR or similar
-            query.push_str(&format!(" LIMIT {}", req.limit));
-        } else {
-            query.push_str(&format!(" LIMIT {}", req.limit));
-        }
+        query.push_str(&format!(" LIMIT {}", req.limit));
 
         if let Some(offset) = req.offset {
             query.push_str(&format!(" START {}", offset));
@@ -120,11 +113,9 @@ impl QueryPlanner {
     pub fn plan_postgres(req: &QueryRequest) -> QueryStatement {
         let mut query = format!("SELECT * FROM {}", req.collection);
         let mut params = HashMap::new();
-        let mut param_idx = 0;
 
         if let Some(ref filter) = req.filter {
-            let param_key = format!("${}", param_idx + 1);
-            param_idx += 1;
+            let param_key = "$1".to_string();
             params.insert(param_key.clone(), filter.value.clone());
             query.push_str(&format!(
                 " WHERE {} {} {}",

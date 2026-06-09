@@ -17,7 +17,10 @@ fn test_query_planner_surreal_basic() {
         offset: None,
     };
     let query = QueryPlanner::plan_surreal(&req);
-    assert!(query.sql.contains("SELECT * FROM skills"), "query: {query:?}");
+    assert!(
+        query.sql.contains("SELECT * FROM skills"),
+        "query: {query:?}"
+    );
     assert!(query.sql.contains("LIMIT 10"), "query: {query:?}");
 }
 
@@ -36,7 +39,12 @@ fn test_query_planner_with_filter() {
         offset: Some(10),
     };
     let query = QueryPlanner::plan_surreal(&req);
-    assert!(query.sql.contains("WHERE author = \"Alice\""), "query: {query:?}");
+    assert!(query.sql.contains("WHERE author ="), "query: {query:?}");
+    assert!(
+        query.params.get("p0") == Some(&serde_json::json!("Alice")),
+        "params: {:?}",
+        query.params
+    );
     assert!(query.sql.contains("LIMIT 5"), "query: {query:?}");
     assert!(query.sql.contains("START 10"), "query: {query:?}");
 }
@@ -52,7 +60,10 @@ fn test_query_planner_postgres_pagination() {
         offset: Some(100),
     };
     let query = QueryPlanner::plan_postgres(&req);
-    assert!(query.sql.contains("LIMIT 25 OFFSET 100"), "query: {query:?}");
+    assert!(
+        query.sql.contains("LIMIT 25 OFFSET 100"),
+        "query: {query:?}"
+    );
 }
 
 /// Verifies the workspace packages are publicly accessible from integration tests.
