@@ -3,8 +3,11 @@
 //! Provides a unified query interface across different data stores.
 
 use anyhow::Result;
+use pg_bridge::PgBridge;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::str::FromStr;
+use surreal_bridge::PhenoSurreal;
 use thiserror::Error;
 
 /// Parameterized query statement
@@ -23,16 +26,7 @@ impl QueryStatement {
 }
 
 /// Query port for hexagonal architecture
-///
-/// This is the **port** in the hexagonal/ports-and-adapters pattern:
-/// adapters (`PgBridge`, `SurrealBridge`) implement this trait; the domain
-/// code (callers in `pheno-query` and beyond) only ever depends on the
-/// `QueryPort` interface — never on a concrete adapter.
 pub trait QueryPort {
-    /// Plan a `QueryRequest` into a `QueryStatement` (port-side contract).
-    /// Concrete adapters may also execute the planned statement in their
-    /// own `impl` block; this trait only requires planning so the port
-    /// stays sync.
     fn plan(&self, req: &QueryRequest) -> Result<QueryStatement>;
 }
 
@@ -89,11 +83,81 @@ pub trait QueryBuilder {
     fn build(&self) -> Result<QueryStatement>;
 }
 
+/// Dataset backend selector for runtime dispatch.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DatasetBackend {
+    Surreal,
+    Postgres,
+}
+
+impl DatasetBackend {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Surreal => "surreal",
+            Self::Postgres => "postgres",
+        }
+    }
+}
+
+impl FromStr for DatasetBackend {
+    type Err = anyhow::Error;
+
+    fn from_str(value: &str) -> Result<Self> {
+        match value.to_ascii_lowercase().as_str() {
+            "surreal" => Ok(Self::Surreal),
+            "postgres" | "postgresql" | "pg" => Ok(Self::Postgres),
+            other => Err(anyhow::anyhow!("unsupported backend: {}", other)),
+        }
+    }
+}
+
+/// Read-side dataset abstraction.
+pub trait Dataset {
+    fn schema(&self) -> Result<serde_json::Value>;
+    fn records(&self, limit: usize) -> Result<Vec<serde_json::Value>>;
+}
+
+/// Write-side dataset abstraction.
+pub trait Writer {
+    fn write(&self, record: serde_json::Value) -> Result<()>;
+    fn write_all(&self, records: Vec<serde_json::Value>) -> Result<()> {
+        for record in records {
+            self.write(record)?;
+        }
+        Ok(())
+    }
+}
+
+pub fn load(backend: DatasetBackend, conn_str: &str) -> Result<Box<dyn Dataset>> {
+    match backend {
+        DatasetBackend::Surreal => {
+            let _ = connect_surreal(conn_str)?;
+            Ok(Box::new(SurrealDataset::new(conn_str)))
+        }
+        DatasetBackend::Postgres => {
+            let _ = connect_postgres(conn_str)?;
+            Ok(Box::new(PostgresDataset::new(conn_str)))
+        }
+    }
+}
+
+pub fn writer(backend: DatasetBackend, conn_str: &str) -> Result<Box<dyn Writer>> {
+    match backend {
+        DatasetBackend::Surreal => {
+            let _ = connect_surreal(conn_str)?;
+            Ok(Box::new(SurrealDataset::new(conn_str)))
+        }
+        DatasetBackend::Postgres => {
+            let _ = connect_postgres(conn_str)?;
+            Ok(Box::new(PostgresDataset::new(conn_str)))
+        }
+    }
+}
+
 /// Query planner with parameterized query support
 pub struct QueryPlanner;
 
 impl QueryPlanner {
-    /// Plan query for SurrealDB (parameterized)
     pub fn plan_surreal(req: &QueryRequest) -> QueryStatement {
         let mut query = format!("SELECT * FROM {}", req.collection);
         let mut params = HashMap::new();
@@ -118,7 +182,6 @@ impl QueryPlanner {
         QueryStatement { sql: query, params }
     }
 
-    /// Plan query for PostgreSQL (parameterized)
     pub fn plan_postgres(req: &QueryRequest) -> QueryStatement {
         let mut query = format!("SELECT * FROM {}", req.collection);
         let mut params = HashMap::new();
@@ -143,11 +206,9 @@ impl QueryPlanner {
     }
 
     fn pg_escape_identifier(ident: &str) -> String {
-        // Only allow alphanumeric and underscore to prevent injection
         if ident.chars().all(|c| c.is_alphanumeric() || c == '_') {
             ident.to_string()
         } else {
-            // Reject invalid identifiers
             String::new()
         }
     }
@@ -167,17 +228,6 @@ impl QueryPlanner {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Hexagonal port impls: thin newtype adapters that satisfy `QueryPort`
-// by delegating to the static `QueryPlanner::plan_*` methods.
-//
-// This is the **D19** wiring that makes `phenoData` truly hexagonal:
-// the domain (callers) depend on the `QueryPort` trait, not on
-// `QueryPlanner`'s free functions. Adapters (`pg-bridge`,
-// `surreal-bridge`) implement `QueryPort` for their bridge types.
-// ---------------------------------------------------------------------------
-
-/// SurrealDB-flavoured `QueryPort` adapter.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SurrealQueryPlanner;
 
@@ -187,7 +237,6 @@ impl QueryPort for SurrealQueryPlanner {
     }
 }
 
-/// PostgreSQL-flavoured `QueryPort` adapter.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct PostgresQueryPlanner;
 
@@ -195,6 +244,99 @@ impl QueryPort for PostgresQueryPlanner {
     fn plan(&self, req: &QueryRequest) -> Result<QueryStatement> {
         Ok(QueryPlanner::plan_postgres(req))
     }
+}
+
+struct SurrealDataset {
+    conn_str: String,
+}
+
+impl SurrealDataset {
+    fn new(conn_str: &str) -> Self {
+        Self {
+            conn_str: conn_str.to_string(),
+        }
+    }
+}
+
+impl Dataset for SurrealDataset {
+    fn schema(&self) -> Result<serde_json::Value> {
+        with_runtime(async {
+            let db = PhenoSurreal::new(self.conn_str.clone()).await?;
+            db.describe().await
+        })
+    }
+
+    fn records(&self, limit: usize) -> Result<Vec<serde_json::Value>> {
+        with_runtime(async {
+            let db = PhenoSurreal::new(self.conn_str.clone()).await?;
+            db.sample_records(limit).await
+        })
+    }
+}
+
+impl Writer for SurrealDataset {
+    fn write(&self, record: serde_json::Value) -> Result<()> {
+        with_runtime(async {
+            let db = PhenoSurreal::new(self.conn_str.clone()).await?;
+            db.insert_record(record).await?;
+            Ok(())
+        })
+    }
+}
+
+struct PostgresDataset {
+    conn_str: String,
+}
+
+impl PostgresDataset {
+    fn new(conn_str: &str) -> Self {
+        Self {
+            conn_str: conn_str.to_string(),
+        }
+    }
+}
+
+impl Dataset for PostgresDataset {
+    fn schema(&self) -> Result<serde_json::Value> {
+        with_runtime(async {
+            let db = PgBridge::new(&self.conn_str).await?;
+            db.describe().await
+        })
+    }
+
+    fn records(&self, limit: usize) -> Result<Vec<serde_json::Value>> {
+        with_runtime(async {
+            let db = PgBridge::new(&self.conn_str).await?;
+            db.sample_records(limit).await
+        })
+    }
+}
+
+impl Writer for PostgresDataset {
+    fn write(&self, record: serde_json::Value) -> Result<()> {
+        with_runtime(async {
+            let db = PgBridge::new(&self.conn_str).await?;
+            db.insert_record(record).await
+        })
+    }
+}
+
+fn connect_surreal(conn_str: &str) -> Result<PhenoSurreal> {
+    with_runtime(PhenoSurreal::new(conn_str.to_string()))
+}
+
+fn connect_postgres(conn_str: &str) -> Result<PgBridge> {
+    with_runtime(PgBridge::new(conn_str))
+}
+
+fn with_runtime<F, T>(future: F) -> Result<T>
+where
+    F: std::future::Future<Output = Result<T>>,
+{
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?
+        .block_on(future)
 }
 
 #[cfg(test)]
@@ -257,14 +399,6 @@ mod tests {
         assert!(stmt.sql.contains("LIMIT 10"));
     }
 
-    // -----------------------------------------------------------------------
-    // D19 hexagonal port tests
-    // -----------------------------------------------------------------------
-
-    /// Verify that a `QueryPort` trait object can dispatch to either
-    /// backend (Surreal or Postgres) polymorphically. This is the
-    /// hexagonal contract: callers depend on the trait, not on a
-    /// concrete planner.
     #[test]
     fn test_query_port_dispatch_polymorphism() {
         let req = QueryRequest {
@@ -285,27 +419,34 @@ mod tests {
         ];
 
         let stmts: Vec<QueryStatement> = planners.iter().map(|p| p.plan(&req).unwrap()).collect();
-        // Surreal uses $[\"p0\"], Postgres uses $1
         assert!(stmts[0].sql.contains("WHERE name = $[\"p0\"]"));
         assert!(stmts[1].sql.contains("WHERE name = $1"));
-        // Both have the param bound
         assert!(stmts[0].params.contains_key("p0"));
         assert!(stmts[1].params.contains_key("$1"));
     }
 
-    /// Verify the planner newtypes are zero-sized / `Copy` so they can
-    /// be passed around freely (e.g. embedded in adapter `new` calls).
+    #[test]
+    fn test_backend_parse_aliases() {
+        assert!(matches!(
+            DatasetBackend::from_str("surreal").unwrap(),
+            DatasetBackend::Surreal
+        ));
+        assert!(matches!(
+            DatasetBackend::from_str("pg").unwrap(),
+            DatasetBackend::Postgres
+        ));
+    }
+
     #[test]
     fn test_planner_newtypes_are_copy() {
         let s1 = SurrealQueryPlanner;
-        let s2 = s1; // Copy
-        let _ = s1; // s1 still usable after copy
+        let s2 = s1;
+        let _ = s1;
 
         let p1 = PostgresQueryPlanner;
         let p2 = p1;
         let _ = p1;
 
-        // Smoke: both still plan.
         let req = QueryRequest {
             collection: "t".to_string(),
             filter: None,
@@ -317,3 +458,4 @@ mod tests {
         assert!(p2.plan(&req).is_ok());
     }
 }
+

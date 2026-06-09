@@ -4,12 +4,17 @@ version = "0.1.0"
 edition = "2024"
 description = "Unified query builder for Pheno"
 
+[[bin]]
+name = "pheno-data"
+path = "src/bin/pheno-data.rs"
+
 [dependencies]
 tokio = { workspace = true }
 anyhow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+clap = { version = "4.5", features = ["derive"] }
 proptest = { version = "1.4", optional = true }
 
 [dev-dependencies]

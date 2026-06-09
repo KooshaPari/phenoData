@@ -118,6 +118,7 @@ impl PhenoSurreal {
             .collect();
         Ok(scored)
     }
+
 }
 
 async fn open_local_db(path: impl Into<String>) -> Result<Surreal<Db>> {
