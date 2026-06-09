@@ -28,5 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `.github/dependabot.yml` extended from `cargo`-only to three ecosystems
   (cargo + npm + github-actions) with grouping and labels.
+- `.gitignore` — removed the two duplicate `Cargo.lock` lines. They were being
+  silently concatenated (missing final newline on the first line) into a
+  non-matching `Cargo.lockCargo.lock` pattern by git's parser. `Cargo.lock`
+  is committed in this library workspace for reproducible downstream builds;
+  no ignore is the correct policy here. Added an inline comment explaining the
+  decision and linking to the Cargo reference.
 
 [Unreleased]: https://github.com/KooshaPari/phenoData/compare/main...HEAD
