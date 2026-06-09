@@ -8,6 +8,7 @@
 //! primary API for anything beyond simple select/insert.
 
 use anyhow::Result;
+use pheno_query::{QueryPort, QueryRequest, QueryStatement, SurrealQueryPlanner};
 use serde::{Deserialize, Serialize};
 use surrealdb::Surreal;
 use surrealdb::engine::local::Db;
@@ -22,6 +23,16 @@ pub type RecordId = String;
 /// PhenoSurreal - SurrealDB with extensions
 pub struct PhenoSurreal {
     db: Surreal<Db>,
+    /// Embedded planner so `QueryPort::plan` is `&self`-callable.
+    planner: SurrealQueryPlanner,
+}
+
+impl QueryPort for PhenoSurreal {
+    fn plan(&self, req: &QueryRequest) -> Result<QueryStatement> {
+        // Hexagonal: bridge exposes the port so domain code can hold
+        // `&dyn QueryPort` and dispatch to either backend uniformly.
+        self.planner.plan(req)
+    }
 }
 
 impl PhenoSurreal {
@@ -29,7 +40,10 @@ impl PhenoSurreal {
     pub async fn new(path: impl Into<String>) -> Result<Self> {
         let db = open_local_db(path).await?;
         db.use_ns("pheno").use_db("main").await?;
-        Ok(Self { db })
+        Ok(Self {
+            db,
+            planner: SurrealQueryPlanner,
+        })
     }
 
     /// Store a skill with versioning via raw SQL
