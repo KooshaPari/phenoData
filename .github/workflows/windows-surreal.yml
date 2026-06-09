@@ -1,0 +1,31 @@
+name: Windows SurrealDB Integration
+
+permissions:
+  contents: read
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-surreal:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --workspace
+        env:
+          RUST_LOG: debug
+      - name: SurrealDB Windows Mem-only Test
+        run: |
+          cargo test -p surreal-bridge -- --nocapture
+        env:
+          RUST_LOG: debug
+        continue-on-error: true
