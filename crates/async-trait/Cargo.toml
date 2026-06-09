@@ -1,0 +1,9 @@
+[package]
+name = "async-trait"
+version = "0.1.89"
+edition = "2024"
+description = "Local offline shim for async-trait in the phenoData workspace"
+license.workspace = true
+
+[lib]
+proc-macro = true

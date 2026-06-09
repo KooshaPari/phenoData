@@ -1,0 +1,17 @@
+[package]
+name = "pheno-data-core"
+version = "0.1.0"
+edition = "2024"
+description = "Core dataset and writer ports for the Pheno data workspace"
+license.workspace = true
+repository = "https://github.com/KooshaPari/phenoData"
+
+[dependencies]
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
