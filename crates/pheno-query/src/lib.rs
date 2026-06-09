@@ -231,18 +231,9 @@ mod tests {
 
         assert_eq!(stmt.sql, "", "default sql should be empty");
         assert_eq!(stmt.params.len(), 4, "all four params should be stored");
-        assert_eq!(
-            stmt.params.get("name"),
-            Some(&serde_json::json!("alice"))
-        );
-        assert_eq!(
-            stmt.params.get("count"),
-            Some(&serde_json::json!(7))
-        );
-        assert_eq!(
-            stmt.params.get("active"),
-            Some(&serde_json::json!(true))
-        );
+        assert_eq!(stmt.params.get("name"), Some(&serde_json::json!("alice")));
+        assert_eq!(stmt.params.get("count"), Some(&serde_json::json!(7)));
+        assert_eq!(stmt.params.get("active"), Some(&serde_json::json!(true)));
         assert_eq!(
             stmt.params.get("tags"),
             Some(&serde_json::json!(["a", "b"]))
@@ -252,13 +243,19 @@ mod tests {
     #[test]
     fn test_pg_escape_identifier_rejects_injection() {
         // Malicious identifiers should be rejected (return empty string)
-        assert_eq!(QueryPlanner::pg_escape_identifier("users; DROP TABLE users;--"), "");
+        assert_eq!(
+            QueryPlanner::pg_escape_identifier("users; DROP TABLE users;--"),
+            ""
+        );
         assert_eq!(QueryPlanner::pg_escape_identifier("users\""), "");
         assert_eq!(QueryPlanner::pg_escape_identifier("users'"), "");
         assert_eq!(QueryPlanner::pg_escape_identifier("users\\"), "");
         // Valid identifiers should pass through
         assert_eq!(QueryPlanner::pg_escape_identifier("users"), "users");
-        assert_eq!(QueryPlanner::pg_escape_identifier("user_profiles"), "user_profiles");
+        assert_eq!(
+            QueryPlanner::pg_escape_identifier("user_profiles"),
+            "user_profiles"
+        );
     }
 
     #[test]
@@ -290,6 +287,7 @@ mod tests {
             (FilterOperator::EndsWith, "LIKE"),
         ];
         for (op, expected) in ops {
+            let op_debug = format!("{:?}", op);
             let req = QueryRequest {
                 collection: "test".to_string(),
                 filter: Some(Filter {
@@ -302,7 +300,10 @@ mod tests {
                 offset: None,
             };
             let stmt = QueryPlanner::plan_postgres(&req);
-            assert!(stmt.sql.contains(expected), "operator {:?} should produce {}", op, expected);
+            assert!(
+                stmt.sql.contains(expected),
+                "operator {op_debug} should produce {expected}"
+            );
         }
     }
 
@@ -366,8 +367,11 @@ mod tests {
         fn prop_query_limit_always_present(req in arb_query_request()) {
             let surreal = QueryPlanner::plan_surreal(&req);
             let postgres = QueryPlanner::plan_postgres(&req);
-            prop_assert!(surreal.sql.contains(&format!("LIMIT {}", req.limit)));
-            prop_assert!(postgres.sql.contains(&format!("LIMIT {}", req.limit)));
+            let limit = req.limit.to_string();
+            let surreal_limit = format!("LIMIT {limit}");
+            let postgres_limit = format!("LIMIT {limit}");
+            prop_assert!(surreal.sql.contains(&surreal_limit));
+            prop_assert!(postgres.sql.contains(&postgres_limit));
         }
 
         #[test]
@@ -396,8 +400,10 @@ mod tests {
             let surreal = QueryPlanner::plan_surreal(&req);
             let postgres = QueryPlanner::plan_postgres(&req);
             if let Some(off) = req.offset {
-                prop_assert!(surreal.sql.contains(&format!("START {}", off)));
-                prop_assert!(postgres.sql.contains(&format!("OFFSET {}", off)));
+                let surreal_offset = format!("START {off}");
+                let postgres_offset = format!("OFFSET {off}");
+                prop_assert!(surreal.sql.contains(&surreal_offset));
+                prop_assert!(postgres.sql.contains(&postgres_offset));
             }
         }
     }
