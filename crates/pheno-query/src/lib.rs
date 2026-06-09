@@ -217,4 +217,46 @@ mod tests {
         assert!(!stmt.sql.contains("WHERE"));
         assert!(stmt.sql.contains("LIMIT 10"));
     }
+
+    #[test]
+    fn test_query_statement_param_builder() {
+        // QueryStatement::param is the public builder for inserting named parameters.
+        // It must accept any Into<serde_json::Value>, preserve insertion order semantics
+        // (HashMap is unordered, so we assert by lookup), and return Self for chaining.
+        let stmt = QueryStatement::default()
+            .param("name", "alice")
+            .param("count", 7i64)
+            .param("active", true)
+            .param("tags", serde_json::json!(["a", "b"]));
+
+        assert_eq!(stmt.sql, "", "default sql should be empty");
+        assert_eq!(stmt.params.len(), 4, "all four params should be stored");
+        assert_eq!(
+            stmt.params.get("name"),
+            Some(&serde_json::json!("alice"))
+        );
+        assert_eq!(
+            stmt.params.get("count"),
+            Some(&serde_json::json!(7))
+        );
+        assert_eq!(
+            stmt.params.get("active"),
+            Some(&serde_json::json!(true))
+        );
+        assert_eq!(
+            stmt.params.get("tags"),
+            Some(&serde_json::json!(["a", "b"]))
+        );
+    }
+
+    #[test]
+    fn test_query_statement_param_overwrite() {
+        // Re-binding the same key should overwrite, matching HashMap::insert semantics.
+        let stmt = QueryStatement::default()
+            .param("k", "first")
+            .param("k", "second");
+
+        assert_eq!(stmt.params.len(), 1);
+        assert_eq!(stmt.params.get("k"), Some(&serde_json::json!("second")));
+    }
 }
