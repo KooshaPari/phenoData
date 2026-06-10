@@ -7,7 +7,6 @@ pub mod core {
     pub use crate::{Dataset, Schema, Writer};
 }
 
-use async_trait::async_trait;
 use std::pin::Pin;
 
 pub use crate::errors::{CoreError, Result};
@@ -36,14 +35,12 @@ impl Schema {
     }
 }
 
-#[async_trait]
 pub trait Dataset: Send + Sync {
     fn records(&self) -> BoxStream<'_, Result<Record>>;
     fn schema(&self) -> Schema;
     async fn close(&self) -> Result<()>;
 }
 
-#[async_trait]
 pub trait Writer: Send + Sync {
     async fn write(&mut self, record: Record) -> Result<()>;
     async fn flush(&mut self) -> Result<()>;

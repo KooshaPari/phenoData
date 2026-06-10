@@ -192,10 +192,6 @@ checksum = "8b75356056920673b02621b35afd0f7dda9306d03c79a30f5c56c44cf256e3de"
 [[package]]
 name = "async-trait"
 version = "0.1.89"
-
-[[package]]
-name = "async-trait"
-version = "0.1.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9035ad2d096bed7955a320ee7e2230574d28fd3c3a0f186cbea1ff3c7eed5dbb"
 dependencies = [
@@ -918,7 +914,7 @@ version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d697d376cbfa018c23eb4caab1fd1883dd9c906a8c034e8d9a3cb06a7e0bef9"
 dependencies = [
- "async-trait 0.1.89 (registry+https://github.com/rust-lang/crates.io-index)",
+ "async-trait",
  "deadpool",
  "getrandom 0.2.17",
  "tokio",
@@ -2614,7 +2610,7 @@ version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "622acbc9100d3c10e2ee15804b0caa40e55c933d5aa53814cd520805b7958a49"
 dependencies = [
- "async-trait 0.1.89 (registry+https://github.com/rust-lang/crates.io-index)",
+ "async-trait",
  "bytes",
  "chrono",
  "futures-channel",
@@ -2784,7 +2780,6 @@ dependencies = [
 name = "pheno-data-core"
 version = "0.1.0"
 dependencies = [
- "async-trait 0.1.89",
  "serde",
  "serde_json",
  "thiserror",
@@ -4215,7 +4210,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f4e06f586c9179a02349b88b0c18e3a0850c55431aa513e0cd66529c00da1af"
 dependencies = [
  "anyhow",
- "async-trait 0.1.89 (registry+https://github.com/rust-lang/crates.io-index)",
+ "async-trait",
  "bytes",
  "chrono",
  "flatbuffers",
@@ -4541,7 +4536,7 @@ version = "0.7.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4dd8df5ef180f6364759a6f00f7aadda4fbbac86cdee37480826a6ff9f3574ce"
 dependencies = [
- "async-trait 0.1.89 (registry+https://github.com/rust-lang/crates.io-index)",
+ "async-trait",
  "byteorder",
  "bytes",
  "fallible-iterator",
@@ -4688,7 +4683,7 @@ version = "0.14.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac2a5518c70fa84342385732db33fb3f44bc4cc748936eb5833d2df34d6445ef"
 dependencies = [
- "async-trait 0.1.89 (registry+https://github.com/rust-lang/crates.io-index)",
+ "async-trait",
  "axum",
  "base64",
  "bytes",
