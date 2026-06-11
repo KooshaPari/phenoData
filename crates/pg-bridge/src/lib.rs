@@ -10,16 +10,55 @@
 
 use anyhow::Result;
 use deadpool_postgres::{Config, ManagerConfig, Pool, RecyclingMethod, Runtime};
+use pheno_data_core::{Dataset, DatasetFuture, Record};
 use pheno_query::{QueryPort, QueryRequest, QueryStatement};
 use serde::{Deserialize, Serialize};
+use std::future::Future;
+use std::pin::Pin;
+use std::sync::Arc;
 use tokio_postgres::NoTls;
 use url::Url;
+
+type LoaderFuture = Pin<Box<dyn Future<Output = Result<Vec<Record>>> + Send>>;
+type SchemaFuture = Pin<Box<dyn Future<Output = Result<serde_json::Value>> + Send>>;
+type RecordsLoader = dyn Fn() -> LoaderFuture + Send + Sync;
+type SchemaLoader = dyn Fn() -> SchemaFuture + Send + Sync;
 
 /// PgBridge - PostgreSQL with pgvector
 pub struct PgBridge {
     pool: Pool,
     /// Embedded planner so `QueryPort::plan` is `&self`-callable.
     planner: pheno_query::PostgresQueryPlanner,
+}
+
+pub struct PgDataset {
+    records_loader: Arc<RecordsLoader>,
+    schema_loader: Arc<SchemaLoader>,
+}
+
+impl PgDataset {
+    pub fn new<RL, RF, SL, SF>(records_loader: RL, schema_loader: SL) -> Self
+    where
+        RL: Fn() -> RF + Send + Sync + 'static,
+        RF: Future<Output = Result<Vec<Record>>> + Send + 'static,
+        SL: Fn() -> SF + Send + Sync + 'static,
+        SF: Future<Output = Result<serde_json::Value>> + Send + 'static,
+    {
+        Self {
+            records_loader: Arc::new(move || Box::pin(records_loader())),
+            schema_loader: Arc::new(move || Box::pin(schema_loader())),
+        }
+    }
+}
+
+impl Dataset for PgDataset {
+    fn records(&self) -> DatasetFuture<Vec<Record>> {
+        (self.records_loader)()
+    }
+
+    fn schema(&self) -> DatasetFuture<serde_json::Value> {
+        (self.schema_loader)()
+    }
 }
 
 impl QueryPort for PgBridge {
