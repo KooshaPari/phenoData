@@ -1,14 +1,27 @@
+# Phenotype-org standard .gitignore — Rust
+# Source: https://github.com/KooshaPari/phenotype-tooling/blob/main/templates/gitignore-rust
+
+# Build artifacts
 /target/
+**/*.rs.bk
+Cargo.lock.bak
+
+# Editor
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Repo-specific lines preserved from prior .gitignore:
 /.cache/
 /node_modules/
 /docs/.vitepress/dist/
-
-# Cargo.lock is committed for this library workspace
-# (consumed by downstream crates for reproducible builds).
-# See https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html
-
-# ===== Standard auto-generated hygiene ignores (do not edit manually) =====
-.DS_Store
 .env
 .env.*
 !.env.example
@@ -23,4 +36,3 @@ __pycache__/
 .ruff_cache/
 .venv/
 venv/
-# ===== End standard hygiene ignores =====
