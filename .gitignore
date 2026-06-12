@@ -1,3 +1,6 @@
+# Phenotype-org standard .gitignore — Node
+# Source: https://github.com/KooshaPari/phenotype-tooling/blob/main/templates/gitignore-node
+
 # Phenotype-org standard .gitignore — Rust
 # Source: https://github.com/KooshaPari/phenotype-tooling/blob/main/templates/gitignore-rust
 
@@ -36,3 +39,20 @@ __pycache__/
 .ruff_cache/
 .venv/
 venv/
+
+# --- adopted from phenotype-tooling/templates/gitignore-node ---
+.cache/
+.eslintcache
+.npm/
+.parcel-cache/
+.pnp
+.pnp.js
+/build/
+/coverage/
+/dist/
+/out/
+lerna-debug.log*
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
