@@ -21,6 +21,12 @@ Progress: ████████░░ 80%
 
 # PhenoData — Data Layer Workspace
 
+## State
+
+Progress: `[██████░░░░] 55%` — Rust data-layer crates on main, audits landing.
+
+_Updated 2026-06-08 — audit pass._
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/KooshaPari/phenoData/actions/workflows/ci.yml/badge.svg)](https://github.com/KooshaPari/phenoData/actions/workflows/ci.yml)
 [![Coverage](https://github.com/KooshaPari/phenoData/actions/workflows/coverage.yml/badge.svg)](https://github.com/KooshaPari/phenoData/actions/workflows/coverage.yml)
@@ -163,3 +169,24 @@ will be opened once the public API stabilizes.
 Dual-licensed under MIT or Apache-2.0 — see [`LICENSE-MIT`](./LICENSE-MIT) and
 [`LICENSE-APACHE`](./LICENSE-APACHE). The repository also carries the org-standard
 [`LICENSE`](./LICENSE) file.
+
+## Description
+
+Phenotype data-layer workspace — Rust crates for `surreal-bridge` (SurrealDB embedded integration), `pg-bridge` (PostgreSQL + `pgvector`), and `pheno-query` (unified query planner across data stores).
+
+## Install
+
+Requirements: Rust 1.84+, PostgreSQL 14+ with `pgvector` for `pg-bridge` (see `## Requirements` above). Add the crates you need to your `Cargo.toml`:
+
+```toml
+[dependencies]
+surreal-bridge = { path = "../phenoData/crates/surreal-bridge" }
+pg-bridge      = { path = "../phenoData/crates/pg-bridge" }
+pheno-query    = { path = "../phenoData/crates/pheno-query" }
+```
+
+First build compiles SurrealDB + pgvector bindings — expect a longer initial `cargo build`.
+
+## Contributing
+
+PRs welcome. See `CONTRIBUTING.md`. New crates go in `crates/` and join the workspace via `Cargo.toml`. Schema changes for `pg-bridge` need a matching pgvector migration in the crate's `migrations/` dir.
