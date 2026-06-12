@@ -17,3 +17,13 @@ jobs:
       - run: cargo build --workspace
       - run: cargo test --workspace
       - run: cargo clippy --workspace -- -D warnings
+
+  check-cliff-template:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Check cliff.toml adoption
+        run: ./scripts/check-cliff-template.sh
