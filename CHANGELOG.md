@@ -9,30 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **CI coverage** — new `coverage.yml` workflow runs `cargo-llvm-cov` over the workspace,
-  enforces a 60% line-coverage floor (`--fail-under-lines 60`), and uploads
-  `lcov.info` to Codecov plus a 14-day GitHub Actions artifact.
-- **`tarpaulin.toml`** — workspace coverage-threshold baseline (HTML, XML, Lcov
-  outputs; `--features all`; mirrors the CI `--fail-under-lines` value).
-- **Gitleaks workflow** (`gitleaks.yml`) — weekly + push/PR secret scan
-  complementing the existing TruffleHog jobs; pinned `gitleaks/gitleaks-action`.
-- **`just coverage`** and **`just coverage-lcov`** recipes (mirrored in both
-  `justfile` and `Justfile`) — local equivalents of the new CI coverage job.
-- **Dependabot coverage** — `.github/dependabot.yml` now tracks `cargo`, `npm`
-  (VitePress sidecar), and `github-actions` ecosystems, all weekly on Monday
-  with grouped PRs and labels (`dependencies` + ecosystem tag).
-- **README sections** — `Workspace layout`, `Test`, and `Coverage` sections
-  added with directory tree and `cargo-llvm-cov` usage.
-
 ### Changed
 
-- `.github/dependabot.yml` extended from `cargo`-only to three ecosystems
-  (cargo + npm + github-actions) with grouping and labels.
-- `.gitignore` — removed the two duplicate `Cargo.lock` lines. They were being
-  silently concatenated (missing final newline on the first line) into a
-  non-matching `Cargo.lockCargo.lock` pattern by git's parser. `Cargo.lock`
-  is committed in this library workspace for reproducible downstream builds;
-  no ignore is the correct policy here. Added an inline comment explaining the
-  decision and linking to the Cargo reference.
+### Deprecated
 
-[Unreleased]: https://github.com/KooshaPari/phenoData/compare/main...HEAD
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.1.0] - 2026-06-14
+
+### Added
+
+- Initial release with version tracking.
+
+[Unreleased]: https://github.com/KooshaPari/phenoData/compare/0.1.0...HEAD
+[0.1.0]: https://github.com/KooshaPari/phenoData/releases/tag/0.1.0
