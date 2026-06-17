@@ -2,6 +2,7 @@
 name = "pheno-query"
 version = "0.1.0"
 edition = "2024"
+license.workspace = true
 description = "Unified query builder for Pheno"
 
 [dependencies]

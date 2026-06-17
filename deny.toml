@@ -8,11 +8,18 @@ allow = [ "MIT", "Apache-2.0", "Apache-2.0 WITH LLVM-exception", "BSD-2-Clause",
 ignore = [
     # expires: 2027-05-05 — re-evaluate when rsa crate ships constant-time fix
     { id = "RUSTSEC-2023-0071", reason = "RSA Marvin Attack timing side-channel inherited via jsonwebtoken -> surrealdb-core; no safe RSA upgrade path exists as the rsa crate's fully constant-time fix is still in progress upstream; workaround is to avoid RSA-based JWT algorithms in threat-exposed settings" },
+    # Bincode 2.x reached EOL (team ceased development); inherited transitively. No drop-in
+    # replacement without a serialization-format migration; re-evaluate when consumers move to
+    # postcard/bitcode. Informational (unmaintained), not an exploitable vulnerability.
+    { id = "RUSTSEC-2025-0141", reason = "bincode unmaintained (team ceased development); inherited transitively, no exploitable vulnerability, migration to postcard/bitcode tracked separately" },
 ]
 
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+# Intra-workspace path dependencies legitimately use version = "*"; only flag wildcards on
+# crates.io dependencies.
+allow-wildcard-paths = true
 
 [sources]
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
