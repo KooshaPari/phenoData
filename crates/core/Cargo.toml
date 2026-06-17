@@ -3,6 +3,7 @@ name = "pheno-data-core"
 version = "0.1.0"
 edition = "2024"
 license.workspace = true
+publish = false
 description = "Core dataset traits and records for PhenoData"
 
 [dependencies]
