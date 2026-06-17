@@ -25,12 +25,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
       - name: Initialize CodeQL
         uses: github/codeql-action/init@ce64ddcb0d8d890d2df4a9d1c04ff297367dea2a # v3
         with:
           languages: rust
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@fee9466b8957867761f2d78f922ab084e3e2dd17
+      # Explicit build instead of autobuild: autobuild's bundled CodeQL version drifted from
+      # the init/analyze version (3.35.2 vs 3.36.0) causing a configuration error.
+      - name: Build
+        run: cargo build --workspace --all-features
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@ce64ddcb0d8d890d2df4a9d1c04ff297367dea2a # v3
         with:
