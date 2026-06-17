@@ -2770,7 +2770,6 @@ dependencies = [
  "rustls",
  "serde",
  "serde_json",
- "thiserror",
  "tokio",
  "tokio-postgres",
  "tokio-postgres-rustls",
@@ -4041,7 +4040,6 @@ dependencies = [
  "serde_json",
  "surrealdb",
  "tempfile",
- "thiserror",
  "tokio",
  "tokio-test",
 ]

@@ -11,7 +11,6 @@ tokio = { workspace = true }
 anyhow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-thiserror = { workspace = true }
 pheno-query = { path = "../pheno-query" }
 pheno-data-core = { path = "../core" }
 # SurrealDB embedded — RocksDB on Unix; in-memory on Windows (no C++ toolchain required)
