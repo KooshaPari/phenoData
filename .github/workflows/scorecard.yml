@@ -4,30 +4,23 @@ concurrency:
   cancel-in-progress: true
 
 on:
-
-
-
-  timeout-minutes: 10
-
-
   branch_protection_rule:
   schedule:
     - cron: '17 3 * * 6'
   push:
     branches: [main]
 
-permissions: read-all
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+  id-token: write
 
 jobs:
   analysis:
     name: Scorecard analysis
     runs-on: ubuntu-24.04
-    permissions:
-      security-events: write
-      id-token: write
-      contents: read
-      actions: read
-
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:

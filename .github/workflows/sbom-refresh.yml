@@ -6,7 +6,6 @@ on:
   schedule:
     - cron: '0 0 1 * *'  # 1st of each month
   workflow_dispatch:
-  timeout-minutes: 15
 
 jobs:
   call-sbom-refresh:
