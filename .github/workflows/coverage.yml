@@ -28,7 +28,7 @@ jobs:
           components: llvm-tools-preview
 
       - name: Cache cargo registry/target
-        uses: Swatinem/rust-cache@9bdad043e88c758939e4e92c0a7ce417126fbf34
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
 
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov --locked

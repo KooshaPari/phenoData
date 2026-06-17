@@ -1,0 +1,12 @@
+# cargo-audit configuration
+# Ignored advisories are mirrored from deny.toml [advisories].ignore
+# Re-evaluate periodically.
+
+[advisories]
+ignore = [
+    # RSA Marvin Attack timing side-channel inherited via jsonwebtoken -> surrealdb-core.
+    # No safe RSA upgrade path exists; rsa crate's fully constant-time fix is still in
+    # progress upstream. Workaround: avoid RSA-based JWT algorithms in threat-exposed
+    # settings. Re-evaluate when rsa ships a constant-time fix (expires ~2027-05-05).
+    "RUSTSEC-2023-0071",
+]

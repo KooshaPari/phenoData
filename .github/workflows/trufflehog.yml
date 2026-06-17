@@ -23,6 +23,6 @@ jobs:
       - uses: trufflesecurity/trufflehog@75add79b929b263dae147d2e5bcf0daf292165cf
         with:
           path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
-          extra_args: --only-verified --fail --no-update
+          base: ${{ github.event.pull_request.base.sha || github.event.repository.default_branch }}
+          head: ${{ github.event.pull_request.head.sha || 'HEAD' }}
+          extra_args: --only-verified --no-update
