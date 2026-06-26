@@ -241,7 +241,6 @@ pub struct ScoredEmbedding {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pheno_data_core::Dataset;
     use tempfile::tempdir;
 
     #[tokio::test]
