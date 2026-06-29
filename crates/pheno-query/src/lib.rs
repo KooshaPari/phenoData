@@ -6,6 +6,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
+use tracing::instrument;
 
 /// Parameterized query statement
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -42,6 +43,8 @@ pub enum QueryError {
     InvalidQuery(String),
     #[error("execution failed: {0}")]
     ExecutionFailed(String),
+    #[error("unsupported dataset backend: {0}")]
+    UnsupportedBackend(String),
 }
 
 /// Unified query request
@@ -98,16 +101,22 @@ pub enum Backend {
     Postgres,
 }
 
-pub fn load(source: &str) -> Result<Backend> {
+/// Load backend from a source string.
+///
+/// Returns `QueryError::UnsupportedBackend` for unrecognised URI schemes.
+#[instrument(skip(source), fields(source))]
+pub fn load(source: &str) -> std::result::Result<Backend, QueryError> {
     if source.starts_with("surreal://") {
+        tracing::debug!(backend = "Surreal", "resolved backend");
         return Ok(Backend::Surreal);
     }
 
     if source.starts_with("postgres://") || source.starts_with("postgresql://") {
+        tracing::debug!(backend = "Postgres", "resolved backend");
         return Ok(Backend::Postgres);
     }
 
-    Err(anyhow::anyhow!("unsupported dataset backend: {source}"))
+    Err(QueryError::UnsupportedBackend(source.to_string()))
 }
 
 impl QueryPlanner {
@@ -333,5 +342,30 @@ mod tests {
         };
         assert!(s2.plan(&req).is_ok());
         assert!(p2.plan(&req).is_ok());
+    }
+
+    #[test]
+    fn test_load_returns_typed_error() {
+        let result = load("sqlite:///tmp/db");
+        match result {
+            Err(QueryError::UnsupportedBackend(msg)) => {
+                assert!(msg.contains("sqlite"));
+            }
+            _ => panic!("expected UnsupportedBackend error"),
+        }
+    }
+
+    #[test]
+    fn test_load_surreal_ok() {
+        assert_eq!(load("surreal://embedded/pheno").unwrap(), Backend::Surreal);
+    }
+
+    #[test]
+    fn test_load_postgres_ok() {
+        assert_eq!(load("postgres://localhost/db").unwrap(), Backend::Postgres);
+        assert_eq!(
+            load("postgresql://localhost/db").unwrap(),
+            Backend::Postgres
+        );
     }
 }
