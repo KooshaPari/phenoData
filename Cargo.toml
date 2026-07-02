@@ -25,3 +25,6 @@ thiserror = "2.0"
 anyhow = "1.0"
 tracing = "0.1"
 tracing-attributes = "0.1"
+
+[workspace.metadata.cargo-machete]
+ignored = ["rustls", "tokio-postgres-rustls", "tracing-attributes", "proptest", "tokio"]
