@@ -8,6 +8,9 @@ concurrency:
 
 on: [push, pull_request]
 jobs:
+  trace-gate:
+    name: FR Coverage Gate
+    uses: KooshaPari/phenotype-pm-core/.github/workflows/trace-gate.yml@main
   test:
     runs-on: ubuntu-24.04
     steps:
@@ -27,3 +30,4 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Check cliff.toml adoption
         run: ./scripts/check-cliff-template.sh
+
