@@ -9,7 +9,7 @@ on:
 
 jobs:
   call-sbom-refresh:
-    uses: KooshaPari/phenotype-tooling/.github/workflows/sbom-monthly.yml@79dff2b798fb8a3bc64237e4b2d054a08d3a4601
+    uses: KooshaPari/phenotype-tooling/.github/workflows/sbom-monthly.yml@9dee6790f8c303d8c4d600533ccc895d46c7b9fe
     with:
       repo_path: '.'
       build_system: 'rust'
